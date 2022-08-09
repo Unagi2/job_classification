@@ -20,10 +20,11 @@ def get_train_data(params) -> list[Any]:
     データセットのロードとリサンプリングを処理
 
     Args:
-        params: パラメータ
+        params: パラメータを含む辞書
+
     Returns:
-        data_list: データ
-        label_list: ラベル
+        data_list(list): データ
+        label_list(list): ラベル
 
     Examples:
         関数の使い方
@@ -44,6 +45,29 @@ def get_train_data(params) -> list[Any]:
 
     data_list = df_train["description"]
     label_list = df_train["jobflag"]
+
+    # Class count オーバーサンプリング数指定用
+    count_max = df_train["jobflag"].value_counts().max()
+
+    # Divide by class
+    df_class_1 = df_train[df_train['jobflag'] == 1]
+    df_class_2 = df_train[df_train['jobflag'] == 2]
+    df_class_3 = df_train[df_train['jobflag'] == 3]
+    df_class_4 = df_train[df_train['jobflag'] == 4]
+
+    # リサンプリング（ROS）
+    df_class_1_over = df_class_1.sample(count_max, replace=True)
+    df_class_2_over = df_class_2.sample(count_max, replace=True)
+    df_class_3_over = df_class_3.sample(count_max, replace=True)
+
+    # Concat処理
+    df_train_over = pd.concat([df_class_4, df_class_1_over, df_class_2_over, df_class_3_over], axis=0).reset_index()
+
+    # print('Random over-sampling:')
+    # print(df_test_over.target.value_counts())
+
+    data_list = df_train_over['description']
+    label_list = df_train_over['jobflag']
 
     return data_list, label_list
 

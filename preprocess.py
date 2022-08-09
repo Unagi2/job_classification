@@ -10,6 +10,7 @@ import logging
 from typing import Any
 import pandas as pd
 import matplotlib.pyplot as plt
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +65,13 @@ def get_train_data(params) -> list[Any]:
     df_train_over = pd.concat([df_class_4, df_class_1_over, df_class_2_over, df_class_3_over], axis=0).reset_index()
 
     # print('Random over-sampling:')
-    # print(df_test_over.target.value_counts())
+    # print(df_train_over.jobflag.value_counts())
 
-    data_list = df_train_over['description']
+    df_train_crean = []
+    for i in range(0, len(df_train_over['description'])):
+        df_train_crean.append(BeautifulSoup(df_train_over['description'][i]).get_text())
+
+    data_list = pd.Series(df_train_crean)
     label_list = df_train_over['jobflag']
 
     return data_list, label_list
@@ -118,4 +123,4 @@ if __name__ == "__main__":
     params = Parameters(**setup_params(vars(args), args.parameters))  # args，run_date，git_revisionなどを追加した辞書を取得
 
     train_data, train_label = get_train_data(params)
-    test_data, test_label = get_test_data(params)
+    # test_data, test_label = get_test_data(params)

@@ -25,7 +25,7 @@ def get_train_data(params) -> list[Any]:
 
     Returns:
         data_list(list): データ
-        label_list(list): ラベル
+        label_list(list): 正解データ
 
     Examples:
         関数の使い方
@@ -44,8 +44,8 @@ def get_train_data(params) -> list[Any]:
     # 学習用データの読み込み
     df_train = pd.read_csv("./dataset/train.csv")
 
-    data_list = df_train["description"]
-    label_list = df_train["jobflag"]
+    data_list = []
+    label_list = []
 
     # Class count オーバーサンプリング数指定用
     count_max = df_train["jobflag"].value_counts().max()
@@ -61,9 +61,10 @@ def get_train_data(params) -> list[Any]:
     df_class_1_over = df_class_1.sample(count_max, replace=True)
     df_class_2_over = df_class_2.sample(count_max, replace=True)
     df_class_3_over = df_class_3.sample(count_max, replace=True)
+    # df_class_4_over = df_class_4.sample(count_max, replace=True)
 
     # Concat処理
-    df_train_over = pd.concat([df_class_4, df_class_1_over, df_class_2_over, df_class_3_over], axis=0).reset_index()
+    df_train_over = pd.concat([df_class_1_over, df_class_2_over, df_class_3_over, df_class_4], axis=0).reset_index()
 
     # print('Random over-sampling:')
     # print(df_train_over.jobflag.value_counts())
@@ -71,7 +72,7 @@ def get_train_data(params) -> list[Any]:
     # 不要タグの削除-クリーニング
     df_train_crean = []
     for i in range(0, len(df_train_over['description'])):
-        df_train_crean.append(BeautifulSoup(df_train_over['description'][i]).get_text())
+        df_train_crean.append(BeautifulSoup(df_train_over['description'][i]).get_text().lstrip())
 
     data_list = pd.Series(df_train_crean)
     label_list = df_train_over['jobflag']
@@ -102,15 +103,21 @@ def get_test_data(params) -> list[Any]:
     Note:
         注意事項
     """
-    logger.info('Loading Train Dataset...')
+    logger.info('Loading Test Dataset...')
 
     data_list = []
-    label_list = []
 
     # 学習用データの読み込み
-    df_test = pd.read_csv("./dataset/train.csv")
+    df_test = pd.read_csv("./dataset/test.csv")
 
-    return data_list, label_list
+    # 不要タグの削除-クリーニング
+    df_test_crean = []
+    for i in range(0, len(df_test['description'])):
+        df_test_crean.append(BeautifulSoup(df_test['description'][i]).get_text().lstrip())
+
+    data_list = pd.Series(df_test_crean)
+
+    return data_list
 
 
 if __name__ == "__main__":
@@ -125,4 +132,4 @@ if __name__ == "__main__":
     params = Parameters(**setup_params(vars(args), args.parameters))  # args，run_date，git_revisionなどを追加した辞書を取得
 
     train_data, train_label = get_train_data(params)
-    # test_data, test_label = get_test_data(params)
+    test_data = get_test_data(params)

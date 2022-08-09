@@ -67,6 +67,7 @@ def get_train_data(params) -> list[Any]:
     # print('Random over-sampling:')
     # print(df_train_over.jobflag.value_counts())
 
+    # 不要タグの削除-クリーニング
     df_train_crean = []
     for i in range(0, len(df_train_over['description'])):
         df_train_crean.append(BeautifulSoup(df_train_over['description'][i]).get_text())

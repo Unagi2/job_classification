@@ -8,6 +8,8 @@ from utils import dump_params, setup_params
 from utils import set_logging
 import logging
 from typing import Any
+import pandas as pd
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +39,45 @@ def get_train_data(params) -> list[Any]:
     """
     logger.info('Loading Train Dataset...')
 
+    # 学習用データの読み込み
+    df_train = pd.read_csv("./dataset/train.csv")
+
+    data_list = df_train["description"]
+    label_list = df_train["jobflag"]
+
+    return data_list, label_list
+
+
+def get_test_data(params) -> list[Any]:
+    """評価データのロード
+
+    データセットのロードとリサンプリングを処理
+
+    Args:
+        params: パラメータ
+    Returns:
+        data_list: データ
+        label_list: ラベル
+
+    Examples:
+        関数の使い方
+
+    Raises:
+        例外の名前: 例外の説明
+
+    Yields:
+        戻り値の型: 戻り値についての説明
+
+    Note:
+        注意事項
+    """
+    logger.info('Loading Train Dataset...')
+
     data_list = []
     label_list = []
+
+    # 学習用データの読み込み
+    df_test = pd.read_csv("./dataset/train.csv")
 
     return data_list, label_list
 
@@ -54,4 +93,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     params = Parameters(**setup_params(vars(args), args.parameters))  # args，run_date，git_revisionなどを追加した辞書を取得
 
-    get_train_data(params)
+    train_data, train_label = get_train_data(params)
+    test_data, test_label = get_test_data(params)

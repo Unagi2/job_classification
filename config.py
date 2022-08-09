@@ -32,6 +32,9 @@ class Parameters:
 
     device: str = ''  # デバイス
 
+    # データセットパラメータ
+    sampling_num: int = 10000
+
     # 訓練データパラメータ
     load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
     batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）

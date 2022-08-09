@@ -49,6 +49,7 @@ def get_train_data(params) -> list[Any]:
 
     # Class count オーバーサンプリング数指定用
     count_max = df_train["jobflag"].value_counts().max()
+    # count_max = params.sampling_num
 
     # Divide by class
     df_class_1 = df_train[df_train['jobflag'] == 1]

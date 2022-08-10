@@ -26,20 +26,27 @@ class Parameters:
     run_date: str = ''  # 実行時の時刻
     git_revision: str = ''  # 実行時のプログラムのGitのバージョン
 
-    dataset: str = 'Deu-mix'  # 使用するデータセットのID (4GLte-xxx/Ctw/Deu-xxx)
-    prediction_distance: int = 1  # どれだけ先の品質を推定するかを指定
-    preprocessed_data_path: str = None  # 前処理済みデータのパス
+    # dataset: str = 'Deu-mix'  # 使用するデータセットのID (4GLte-xxx/Ctw/Deu-xxx)
+    # prediction_distance: int = 1  # どれだけ先の品質を推定するかを指定
+    # preprocessed_data_path: str = None  # 前処理済みデータのパス
 
     device: str = ''  # デバイス
 
     # データセットパラメータ
     train_file_path: str = "./dataset/train.csv"
     test_file_path: str = "./dataset/test.csv"
+    submit_sample_file_path: str = "./dataset/submit_sample.csv"
     num_split: int = 5
     seed: int = 42
     sampling_num: int = 10000
 
-    # 訓練データパラメータ
+    # BERT訓練データパラメータ
+    models_dir: str = "/models/"
+    model_name: str = 'bert-base-uncased'
+    train_batch_size: int = 32
+    valid_batch_size: int = 128
+    num_classes: int = 4
+    epoch: int = 5
     load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
     batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
     data_length: float = float('inf')

@@ -10,6 +10,7 @@ Signateによる職種分類コンペのプロジェクト
 ## Installation
 - 結果出力用ディレクトリを作成
 ```shell
+mkdir dataset
 mkdir result
 ```
 - 各種モジュールのインストール

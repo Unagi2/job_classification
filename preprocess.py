@@ -3,14 +3,20 @@
 """
 import os
 import argparse
+
+import numpy as np
 from config import common_args, Parameters
-from utils import dump_params, setup_params
+from utils import dump_params, setup_params, get_device
 from utils import set_logging
 import logging
 from typing import Any
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
+import nlp
 from bs4 import BeautifulSoup
+from transformers import pipeline, set_seed
+from sklearn.model_selection import StratifiedKFold
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +80,10 @@ def get_train_data(params) -> list[Any]:
     for i in range(0, len(df_train_over['description'])):
         df_train_crean.append(BeautifulSoup(df_train_over['description'][i]).get_text().lstrip())
 
+    generator = pipeline('text-generation', model='gpt2-large')
+    set_seed(42)
+    output = generator("Hello, I'm a language model,", max_length=30, num_return_sequences=5)
+
     data_list = pd.Series(df_train_crean)
     label_list = df_train_over['jobflag']
 
@@ -120,6 +130,111 @@ def get_test_data(params) -> list[Any]:
     return data_list
 
 
+def make_folded_df(params, csv_file, num_splits=5) -> Any:
+    """データセット作成と前処理
+
+        データセットのロードとリサンプリングを処理
+
+        Args:
+            params: パラメータ
+            csv_file: ファイルパス
+            num_splits: 分割数
+
+        Returns:
+            df:　データセット
+
+        Examples:
+            関数の使い方
+
+        Raises:
+            例外の名前: 例外の説明
+
+        Yields:
+            戻り値の型: 戻り値についての説明
+
+        Note:
+            注意事項
+        """
+    logger.info('Loading Test Dataset...')
+
+    df = pd.read_csv(csv_file)  # ファイル読み込み
+
+    # Class count オーバーサンプリング数指定用
+    count_max = df["jobflag"].value_counts().max()
+    # count_max = params.sampling_num
+
+    # Divide by class
+    df_class_1 = df[df['jobflag'] == 1]
+    df_class_2 = df[df['jobflag'] == 2]
+    df_class_3 = df[df['jobflag'] == 3]
+    df_class_4 = df[df['jobflag'] == 4]
+
+    # リサンプリング（ROS）
+    df_class_1_over = df_class_1.sample(count_max, replace=True)
+    df_class_2_over = df_class_2.sample(count_max, replace=True)
+    df_class_3_over = df_class_3.sample(count_max, replace=True)
+    # df_class_4_over = df_class_4.sample(count_max, replace=True)
+
+    # Concat処理
+    df_over = pd.concat([df_class_1_over, df_class_2_over, df_class_3_over, df_class_4], axis=0).reset_index()
+
+    # print('Random over-sampling:')
+    # print(df_over.jobflag.value_counts())
+
+    # # 不要タグの削除-クリーニング
+    df_over['description'] = df_over['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+
+    df = df_over.drop('index', axis=1)
+    df["jobflag"] = df["jobflag"] - 1
+    df["kfold"] = np.nan
+    df = df.rename(columns={'jobflag': 'labels'})
+    label = df["labels"].tolist()
+
+    skfold = StratifiedKFold(num_splits, shuffle=True, random_state=params.seed)
+    for fold, (_, valid_indexes) in enumerate(skfold.split(range(len(label)), label)):
+        for i in valid_indexes:
+            df.iat[i, 3] = fold
+    return df
+
+
+def make_dataset(params, df, tokenizer) -> Any:
+    """BERT用に処理できるようなデータ形式に変換
+
+        Tokenizerを用いて文をIDに変換しデータセットを作成
+
+        Args:
+            params: パラメータ
+            df: 変換前データセット
+            tokenizer:
+
+        Returns:
+            datasets: 変換データセット
+
+        Examples:
+            関数の使い方
+
+        Raises:
+            例外の名前: 例外の説明
+
+        Yields:
+            戻り値の型: 戻り値についての説明
+
+        Note:
+            注意事項
+        """
+    logger.info('Loading Test Dataset...')
+
+    dataset = nlp.Dataset.from_pandas(df)
+    dataset = dataset.map(
+        lambda example: tokenizer(example["description"],
+                                  padding="max_length",
+                                  truncation=True,
+                                  max_length=128))
+    dataset.set_format(type='torch',
+                       columns=['input_ids', 'token_type_ids', 'attention_mask', 'labels'],
+                       device=params.device)
+    return dataset
+
 if __name__ == "__main__":
     # import doctest
     # doctest.testmod()
@@ -130,6 +245,7 @@ if __name__ == "__main__":
     # parser.add_argument("--main")  # 実行スクリプト固有のコマンドライン引数があればここに記入する．
     args = parser.parse_args()
     params = Parameters(**setup_params(vars(args), args.parameters))  # args，run_date，git_revisionなどを追加した辞書を取得
+    vars(params).update({'device': str(get_device())})  # 空きGPU検索
 
-    train_data, train_label = get_train_data(params)
-    test_data = get_test_data(params)
+    # trainデータセット作成
+    df = make_folded_df(params, params.train_file_path, params.num_split)

@@ -19,10 +19,10 @@ class Classifier(nn.Module):
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output, _ = self.bert(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            return_dict=False)  # Pythonの実行上必要なので加筆しました。
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            token_type_ids = token_type_ids,
+            return_dict=False) # Pythonの実行上必要なので加筆しました。
         output = output[:, 0, :]
         output = self.dropout(output)
         output = self.linear(output)

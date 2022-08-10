@@ -45,7 +45,17 @@ python -p parameters.json main.py
 python main.py -h
 ```
 
+## Preprocess
+- 前処理のみ実行
+python preprocess.py
 
+## Training
+- 学習及び予測の実行
+nohup python train_BERT.py &
+
+## Inference
+- 学習済みのモデルを用いて予測を実行
+nohup python.py inference.py --load_model result/{結果ディレクトリ名}
 
 ## Parameter Settings
 

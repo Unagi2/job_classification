@@ -271,6 +271,11 @@ def trainer(params, fold, df, result_dir):
     model = Classifier(params.model_name, num_classes=params.num_classes)
     model = model.to(params.device)
 
+    if '/' in params.model_name:
+        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+    else:
+        model_name_dir = params.model_name
+
     criterion = nn.CrossEntropyLoss()
     optimizer = AdamW(model.parameters(), lr=2e-5)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=1.0)
@@ -309,7 +314,7 @@ def trainer(params, fold, df, result_dir):
         if valid_f1 > best_f1:
             best_f1 = valid_f1
             logger.info("model saving!")
-            torch.save(model.state_dict(), "./" + result_dir + params.models_dir + f"best_{params.model_name}_{fold}.pth")
+            torch.save(model.state_dict(), "./" + result_dir + params.models_dir + f"best_{model_name_dir}_{fold}.pth")
         # logger.info("\n")
 
     return best_f1
@@ -360,7 +365,13 @@ def train(params, result_dir):
         line = f"fold={i}: {f1}\n"
         lines += line
     lines += f"CV    : {cv}"
-    with open(f"./{result_dir}/{params.model_name}_result.txt", mode='w') as f:
+
+    if '/' in params.model_name:
+        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+    else:
+        model_name_dir = params.model_name
+
+    with open(f"./{result_dir}/{model_name_dir}_result.txt", mode='w') as f:
         f.write(lines)
 
     return cv
@@ -379,7 +390,7 @@ if __name__ == "__main__":
     vars(params).update({'device': str(get_device())})  # 空きGPU検索
 
     # 結果出力用ファイルの作成
-    result_dir = f'./result/{params.run_date}'  # 結果出力ディレクトリ
+    result_dir = f'result/{params.run_date}'  # 結果出力ディレクトリ
     os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
     os.mkdir(result_dir + "/figures")
     os.mkdir(result_dir + "/models")

@@ -1,6 +1,7 @@
 """
 学習モデルを用いて推論を行う
 """
+from genericpath import isdir
 import os
 import logging
 import argparse
@@ -8,12 +9,14 @@ from config import common_args, Parameters
 from model_BERT import Classifier
 from preprocess import make_dataset
 from utils import dump_params, setup_params, get_device
+from utils import set_logging
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AdamW, AutoModel, AutoTokenizer
 from bs4 import BeautifulSoup
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +49,15 @@ def predict(params, cv, result_dir) -> None:
     logger.info('inference test data...')
 
     models = []
+
+    if '/' in params.model_name:
+        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+    else:
+        model_name_dir = params.model_name
+
     for fold in range(params.num_split):
         model = Classifier(params.model_name)
-        model.load_state_dict(torch.load("./" + result_dir + "/" + params.models_dir + f"best_{params.model_name}_{fold}.pth"))
+        model.load_state_dict(torch.load("./" + result_dir + "/" + params.models_dir + f"best_{model_name_dir}_{fold}.pth"))
         model.to(params.device)
         model.eval()
         models.append(model)
@@ -95,6 +104,7 @@ def predict(params, cv, result_dir) -> None:
     except NameError:
         submit.to_csv("./" + result_dir + "/output/submission.csv", index=False, header=False)
 
+    logger.info('Inference complete!')
 
 if __name__ == "__main__":
     # import doctest
@@ -109,10 +119,35 @@ if __name__ == "__main__":
     vars(params).update({'device': str(get_device())})  # 空きGPU検索
 
     # 結果出力用ファイルの作成
-    result_dir = f'./result/{params.run_date}'  # 結果出力ディレクトリ
-    os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
+    result_dir = params.args['load_model'] # 結果出力ディレクトリ
+    # os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
+    if isdir(result_dir + "/output"):
+        shutil.rmtree(result_dir + "/output")
     os.mkdir(result_dir + "/output")
-    dump_params(params, f'{result_dir}')  # パラメータを出力
+    if isdir(result_dir + "/inference"):
+        shutil.rmtree(result_dir + "/inference")
+    os.mkdir(result_dir + "/inference")
+    dump_params(params, f'{result_dir}' + "/inference")  # パラメータを出力
 
     cv = 0
-    predict(params, cv)
+
+    if '/' in params.model_name:
+        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+    else:
+        model_name_dir = params.model_name
+
+    with open(f"./{result_dir}/{model_name_dir}_result.txt", mode='r') as f:
+        lines = f.readlines()
+        s_lines = [line.strip() for line in lines]
+        for line in s_lines:
+            if 'CV' in line:
+                cv = float(line.split(':')[1].strip())
+    
+    # ログ設定
+    logger = logging.getLogger(__name__)
+    set_logging(result_dir + "/inference")  # ログを標準出力とファイルに出力するよう設定
+
+    logger.info('parameters: ')
+    logger.info(params)
+
+    predict(params, cv, result_dir)

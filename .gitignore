@@ -2,3 +2,5 @@ venv/
 dataset/
 result/
 __pycache__/
+.vscode/
+*.out

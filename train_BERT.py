@@ -3,7 +3,6 @@
 """
 import os
 import argparse
-from tabnanny import verbose
 from config import common_args, Parameters
 from inference import predict
 from model_BERT import Classifier

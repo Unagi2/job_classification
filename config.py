@@ -33,6 +33,10 @@ class Parameters:
     device: str = ''  # デバイス
 
     # データセットパラメータ
+    train_file_path: str = "./dataset/train.csv"
+    test_file_path: str = "./dataset/test.csv"
+    num_split: int = 5
+    seed: int = 42
     sampling_num: int = 10000
 
     # 訓練データパラメータ

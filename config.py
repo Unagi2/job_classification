@@ -40,6 +40,9 @@ class Parameters:
     batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
     data_length: float = float('inf')
 
+    # train
+    model_name: str = "allenai/scibert_scivocab_uncased"
+
     # param2: dict = field(default_factory=lambda: {'k1': 'v1', 'k2': 'v2'})  # リストや辞書で与える例
 
 

@@ -62,14 +62,16 @@ python main.py -h
 .
 ├── dataset             # データセット
 │   ├── train.csv
-│   └── test.csv
+│   ├── test.csv
+│   └── submit_sample.csv
 ├── config.py           # パラメータ定義
-├── main.py             # 実行ファイル
 ├── parameters.json     # パラメータ指定用ファイル
+├── requirements.txt    # パッケージ情報
 ├── result              # 結果出力ディレクトリ
 │   └── 20211026_165841
 ├── preprocess.py       # 前処理
-├── model.py            # 学習
+├── model_BERT.py       # BERTモデル
+├── train_BERT.py       # BERT学習(実行ファイル)
 ├── inference.py        # 推論
 └── utils.py            # 共有関数群
 ```

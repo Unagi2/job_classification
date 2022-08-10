@@ -30,7 +30,7 @@ class Parameters:
     prediction_distance: int = 1  # どれだけ先の品質を推定するかを指定
     preprocessed_data_path: str = None  # 前処理済みデータのパス
 
-    device: str = ''  # デバイス
+    device: str = 'cuda:0'  # デバイス
 
     # データセットパラメータ
     sampling_num: int = 10000
@@ -41,7 +41,8 @@ class Parameters:
     data_length: float = float('inf')
 
     # train
-    model_name: str = "allenai/scibert_scivocab_uncased"
+    classes_num: int = 4  # 分類クラス数
+    model_name: str = "allenai/scibert_scivocab_uncased"  # 使用するモデル名
 
     # param2: dict = field(default_factory=lambda: {'k1': 'v1', 'k2': 'v2'})  # リストや辞書で与える例
 

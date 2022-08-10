@@ -2,7 +2,6 @@
 学習モデルを用いて推論を行う
 """
 import os
-from os.path import isdir
 import logging
 import argparse
 from os.path import isdir

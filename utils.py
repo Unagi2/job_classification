@@ -7,8 +7,7 @@ from datetime import datetime
 import os
 from dataclasses import asdict
 import numpy as np
-import torch.autograd as autograd
-from torch.autograd import Variable
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -243,3 +242,13 @@ class EarlyStopping:
                 f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
+
+
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)

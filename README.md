@@ -70,6 +70,6 @@ python main.py -h
 │   └── 20211026_165841
 ├── preprocess.py       # 前処理
 ├── model.py            # 学習
-├── predict.py          # 予測
+├── inference.py        # 推論
 └── utils.py            # 共有関数群
 ```

@@ -1,6 +1,16 @@
 """
 学習モデルを用いて推論を行う
 """
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+from genericpath import isdir
+=======
+>>>>>>> 1e49b58 (BERTの実装)
+=======
+>>>>>>> 4b9fff2 (inherence.pyを修正)
+>>>>>>> 6daae07 (inherence.pyを修正)
 import os
 import logging
 import argparse
@@ -12,14 +22,36 @@ from model_BERT_Conv import Classifier_Conv
 from model_RoBERTa import Classifier_RoBERTa
 from preprocess import make_dataset, make_dataset_roberta
 from utils import dump_params, setup_params, get_device
+<<<<<<< HEAD
 from utils import set_logging
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+from utils import set_logging
+=======
+>>>>>>> 1e49b58 (BERTの実装)
+=======
+from utils import set_logging
+>>>>>>> 4b9fff2 (inherence.pyを修正)
+>>>>>>> 6daae07 (inherence.pyを修正)
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AdamW, AutoModel, AutoTokenizer
 from bs4 import BeautifulSoup
+<<<<<<< HEAD
 import shutil
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+import shutil
+=======
+>>>>>>> 1e49b58 (BERTの実装)
+=======
+import shutil
+>>>>>>> 4b9fff2 (inherence.pyを修正)
+>>>>>>> 6daae07 (inherence.pyを修正)
 
 logger = logging.getLogger(__name__)
 

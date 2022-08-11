@@ -1,7 +1,6 @@
 """
 学習モデルを用いて推論を行う
 """
-from genericpath import isdir
 import os
 from os.path import isdir
 import logging

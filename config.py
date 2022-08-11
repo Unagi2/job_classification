@@ -13,6 +13,7 @@ B) パラメータを指定して実行するときにやること．
 """
 
 from dataclasses import dataclass, field
+from email.policy import default
 from utils import dump_params
 
 
@@ -30,19 +31,19 @@ class Parameters:
     # prediction_distance: int = 1  # どれだけ先の品質を推定するかを指定
     # preprocessed_data_path: str = None  # 前処理済みデータのパス
 
-    device: str = ''  # デバイス
+    device: str = 'cuda:0'  # デバイス
 
     # データセットパラメータ
     train_file_path: str = "./dataset/train.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
     num_split: int = 5
-    seed: int = 42
+    seed: int = 43
     sampling_num: int = 10000
 
     # BERT訓練データパラメータ
     models_dir: str = "/models/"
-    model_name: str = 'bert-base-uncased'
+    model_name: str =  'allenai/scibert_scivocab_uncased'  # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 
     train_batch_size: int = 32
     valid_batch_size: int = 128
     num_classes: int = 4
@@ -60,8 +61,8 @@ def common_args(parser):
     """
     parser.add_argument("-p", "--parameters", help="パラメータ設定ファイルのパスを指定．デフォルトはNone", type=str, default=None)
     parser.add_argument('-r', '--restart_lstm', type=int, default=0, help='n回目のLSTM学習からスタート')
-    parser.add_argument('-l', '--load_model', type=str, help='ロードするモデルがあるディレクトリ')
-    parser.add_argument('-s', '--save', type=str, default='./result/', help='モデルを保存するディレクトリ')
+    parser.add_argument('-l', '--load_model', default=None, type=str, help='ロードするモデルがあるディレクトリ')
+    parser.add_argument('-s', '--save', type=str, default='result/', help='学習済みモデルを保存するディレクトリ')
     # parser.add_argument("-a", "--arg1", type=int, help="arg1の説明", default=0)  # コマンドライン引数を指定
     # parser.add_argument("--prediction_distance", type=float, help="arg2の説明", default=1.0)  # コマンドライン引数を指定
     return parser

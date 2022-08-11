@@ -1,10 +1,6 @@
 """
 学習モデルを用いて推論を行う
 """
-<<<<<<< HEAD
-=======
-from genericpath import isdir
->>>>>>> kyasuda
 import os
 import logging
 import argparse
@@ -12,20 +8,14 @@ from config import common_args, Parameters
 from model_BERT import Classifier
 from preprocess import make_dataset
 from utils import dump_params, setup_params, get_device
-<<<<<<< HEAD
-=======
 from utils import set_logging
->>>>>>> kyasuda
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AdamW, AutoModel, AutoTokenizer
 from bs4 import BeautifulSoup
-<<<<<<< HEAD
-=======
 import shutil
->>>>>>> kyasuda
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +48,6 @@ def predict(params, cv, result_dir) -> None:
     logger.info('inference test data...')
 
     models = []
-<<<<<<< HEAD
-    for fold in range(params.num_split):
-        model = Classifier(params.model_name)
-        model.load_state_dict(torch.load("./" + result_dir + "/" + params.models_dir + f"best_{params.model_name}_{fold}.pth"))
-=======
 
     if '/' in params.model_name:
         model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
@@ -72,7 +57,6 @@ def predict(params, cv, result_dir) -> None:
     for fold in range(params.num_split):
         model = Classifier(params.model_name)
         model.load_state_dict(torch.load("./" + result_dir + "/" + params.models_dir + f"best_{model_name_dir}_{fold}.pth"))
->>>>>>> kyasuda
         model.to(params.device)
         model.eval()
         models.append(model)

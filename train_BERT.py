@@ -21,7 +21,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from tqdm import tqdm
-from transformers import AdamW, AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +276,7 @@ def trainer(params, fold, df, result_dir):
     model = model.to(params.device)
 
     if '/' in params.model_name:
-        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+        model_name_dir = params.model_name.split('/')[1]  # model_nameに/が含まれていることがあるため、/以降のみを使う
     else:
         model_name_dir = params.model_name
 
@@ -371,7 +371,7 @@ def train(params, result_dir):
     lines += f"CV    : {cv}"
 
     if '/' in params.model_name:
-        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+        model_name_dir = params.model_name.split('/')[1]  # model_nameに/が含まれていることがあるため、/以降のみを使う
     else:
         model_name_dir = params.model_name
 

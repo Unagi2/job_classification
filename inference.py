@@ -1,13 +1,6 @@
 """
 学習モデルを用いて推論を行う
 """
-<<<<<<< HEAD
-<<<<<<< HEAD
-from genericpath import isdir
-=======
->>>>>>> 1e49b58 (BERTの実装)
-=======
->>>>>>> 4b9fff2 (inherence.pyを修正)
 import os
 import logging
 import argparse
@@ -15,28 +8,14 @@ from config import common_args, Parameters
 from model_BERT import Classifier
 from preprocess import make_dataset
 from utils import dump_params, setup_params, get_device
-<<<<<<< HEAD
-<<<<<<< HEAD
 from utils import set_logging
-=======
->>>>>>> 1e49b58 (BERTの実装)
-=======
-from utils import set_logging
->>>>>>> 4b9fff2 (inherence.pyを修正)
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AdamW, AutoModel, AutoTokenizer
 from bs4 import BeautifulSoup
-<<<<<<< HEAD
-<<<<<<< HEAD
 import shutil
-=======
->>>>>>> 1e49b58 (BERTの実装)
-=======
-import shutil
->>>>>>> 4b9fff2 (inherence.pyを修正)
 
 logger = logging.getLogger(__name__)
 
@@ -124,10 +103,7 @@ def predict(params, cv, result_dir) -> None:
     except NameError:
         submit.to_csv("./" + result_dir + "/output/submission.csv", index=False, header=False)
 
-<<<<<<< HEAD
     logger.info('Inference complete!')
-=======
->>>>>>> 1e49b58 (BERTの実装)
 
 if __name__ == "__main__":
     # import doctest

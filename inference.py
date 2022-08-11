@@ -4,6 +4,8 @@
 import os
 import logging
 import argparse
+from os.path import isdir
+
 from config import common_args, Parameters
 from model_BERT import Classifier
 from preprocess import make_dataset
@@ -50,7 +52,7 @@ def predict(params, cv, result_dir) -> None:
     models = []
 
     if '/' in params.model_name:
-        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+        model_name_dir = params.model_name.split('/')[1]  # model_nameに/が含まれていることがあるため、/以降のみを使う
     else:
         model_name_dir = params.model_name
 
@@ -105,6 +107,7 @@ def predict(params, cv, result_dir) -> None:
 
     logger.info('Inference complete!')
 
+
 if __name__ == "__main__":
     # import doctest
     # doctest.testmod()
@@ -118,7 +121,7 @@ if __name__ == "__main__":
     vars(params).update({'device': str(get_device())})  # 空きGPU検索
 
     # 結果出力用ファイルの作成
-    result_dir = params.args['load_model'] # 結果出力ディレクトリ
+    result_dir = params.args['load_model']  # 結果出力ディレクトリ
     # os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
     if isdir(result_dir + "/output"):
         shutil.rmtree(result_dir + "/output")
@@ -131,7 +134,7 @@ if __name__ == "__main__":
     cv = 0
 
     if '/' in params.model_name:
-        model_name_dir = params.model_name.split('/')[1] # model_nameに/が含まれていることがあるため、/以降のみを使う
+        model_name_dir = params.model_name.split('/')[1]  # model_nameに/が含まれていることがあるため、/以降のみを使う
     else:
         model_name_dir = params.model_name
 

@@ -47,17 +47,23 @@ python main.py -h
 
 ## Preprocess
 - 前処理のみ実行
+```shell
 python preprocess.py
+```
 
 ## Training
 - 学習及び予測の実行
 nohup python train_BERT.py &  # BERT系
 nohup python train_RoBERTa.py &  # RoBERTa系
 
+```shell
+nohup python train_BERT.py -p parameters.json > log_gen  &
+```
 ## Inference
 - 学習済みのモデルを用いて予測を実行
+```shell
 nohup python.py inference.py --load_model result/{結果ディレクトリ名}
-
+```
 ## Parameter Settings
 
 - 指定できるパラメータは以下の通り．
@@ -80,6 +86,7 @@ nohup python.py inference.py --load_model result/{結果ディレクトリ名}
 ├── requirements.txt    # パッケージ情報
 ├── result              # 結果出力ディレクトリ
 │   └── 20211026_165841
+├── gen_finetune        # 生成モデル
 ├── preprocess.py       # 前処理
 ├── model_BERT.py       # BERTモデル
 ├── train_BERT.py       # BERT学習(実行ファイル)

@@ -155,6 +155,8 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
     # クリーニング
     df_over['description'] = clean_txt(df_over['description'])
 
+    # df_over['description'] = df_over['description'].apply(lambda x: re.findall(r"[a-zA-Z]+", x))
+
     df = df_over
     df["jobflag"] = df["jobflag"] - 1
     df["kfold"] = np.nan

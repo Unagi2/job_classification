@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from os.path import isdir
 import argparse
@@ -98,6 +99,7 @@ def gen_model(params, result_dir) -> None:
                                         'attention_mask': torch.stack([f[1] for f in data]),
                                         'labels': torch.stack([f[0] for f in data])}).train()
     # .save_model(result_dir + f'/out_model')
+    torch.cuda.empty_cache()
 
     # 生成モデルからテキスト生成
     generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
@@ -112,37 +114,62 @@ def gen_model(params, result_dir) -> None:
     #######################################################################################
     # 元データセットへの生成データの追加
     df = pd.read_csv(params.train_file_path)  # 読み込み
+
     label_num = params.num_classes  # ラベル番号
     index_num = df['id'].tail()
 
     # 不要タグの削除-クリーニング
     df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
 
+    df_save = df
+    print(df_save.head())
+
+    # 先頭３単語抽出
+    df['description'] = df['description'].apply(lambda x: " ".join(re.findall(r"[a-zA-Z]+", x)[0:3]))
+
     for i in range(1, label_num):
+        print("============================================")
+        print("label: " + str(i))
+        print("============================================")
         for n, text in enumerate(df[df['jobflag'] == i].description):
+            print("label: " + str(i) + "  description-num: " + str(n))
+            print("============================================")
             df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
             gen_num = int((params.sampling_num - df_size) / df_size)  # 生成回数
-            txt_len_min = df[df['jobflag'] == i].description.str.len().min()
-            txt_len_max = df[df['jobflag'] == i].description.str.len().max()
+            txt_len_min = min(df[df['jobflag'] == i].description.str.len())
+            txt_len_max = max(df[df['jobflag'] == i].description.str.len())
             df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
-            target_text = text.split('.', 2)[0]  # + "."
 
-            # 生成モデルからテキスト生成
+            # ターゲットテキストの指定
+            # target_text = text.split('.', 2)[0]  # + "."
+            target_text = text
+
+            # 生成準備
             generated = tokenizer(target_text, return_tensors="pt").input_ids.cuda()
-            # テキスト生成
-            sample_outputs = model.generate(generated, num_beams=gen_num, no_repeat_ngram_size=2, early_stopping=True, do_sample=True, top_k=0,
-                                            max_length=txt_len_max, top_p=0.92, temperature=0.7, num_return_sequences=gen_num)
+
+            # テキスト生成設定
+            sample_outputs = model.generate(generated, do_sample=True, top_k=50,
+                                            num_beams=gen_num, no_repeat_ngram_size=2, early_stopping=True,
+                                            min_length=int(txt_len_min), max_length=int(txt_len_max), top_p=0.95,
+                                            num_return_sequences=gen_num)
 
             # 生成データ
             for s, sample_output in enumerate(sample_outputs):
-                list_add = [[index_num + s + 1, str(tokenizer.decode(sample_output, skip_special_tokens=True).strip()), i]]
-                df_add = pd.DataFrame(data=list_add, columns=['id', 'description', 'jobflag'])
-                print("{}: {}".format(s, tokenizer.decode(sample_output, skip_special_tokens=True).strip()))
-                # Concat処理
-                df_over = pd.concat([df, df_add], axis=0).reset_index()
+                # データフレームに追加 strip("'").
+                list_add = [[s + 1, tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " "), i]]
+                # print(list_add)
 
-            # logger.info(text)
+                df_add = pd.DataFrame(data=list_add, columns=['id', 'description', 'jobflag'])
+                # print(df_add)
+
+                print("{}: {}".format(s, tokenizer.decode(sample_output, skip_special_tokens=True).strip()))
+
+                # Concat処理　元データセットの末尾に追加
+                logger.info("Saving train_generated.csv...")
+                df_over = pd.concat([df_save, df_add], axis=0, ignore_index=True).reset_index()
+
             print("============================================")
+            # logger.info(text)
 
     df_over.to_csv('dataset/train_generated.csv')
 
@@ -162,7 +189,7 @@ if __name__ == "__main__":
     # 結果出力用ファイルの作成
     result_dir = f'./result/{params.run_date}'  # 結果出力ディレクトリ
 
-    os.mkdir(params.run_date)  # 実行日時を名前とするディレクトリを作成
+    os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
     # os.mkdir(result_dir + "/gen_model")
 
     # 生成モデル作成

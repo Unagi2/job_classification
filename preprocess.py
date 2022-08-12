@@ -2,6 +2,7 @@
 データセットの準備など，前処理のモジュール
 """
 import os
+import re
 import argparse
 import numpy as np
 from config import common_args, Parameters
@@ -148,6 +149,8 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
 
     # 不要タグの削除-クリーニング
     df_over['description'] = df_over['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+
+    # df_over['description'] = df_over['description'].apply(lambda x: re.findall(r"[a-zA-Z]+", x))
 
     df = df_over
     df["jobflag"] = df["jobflag"] - 1

@@ -49,20 +49,6 @@ python main.py -h
 - 前処理のみ実行
 ```shell
 python preprocess.py
-```
-## Fine-Tuning
-- 再学習の実行 
-  - result-dir下にgen_modelディレクトリが作成される
-```shell
-python gen_finetune.py -p parameters.json
-```
-
-## Text-Generate
-- Fine-Tuningしたモデルを指定して，テキスト生成
-  - result-dir下に`train_generated.csv`が作成される
-```shell
-python gen_finetune.py -p parameters.json -l ./result/[date]/gen_model
-```
 
 ## Training
 - 学習及び予測の実行
@@ -71,6 +57,9 @@ nohup python train_BERT.py &  # BERT系
 nohup python train_RoBERTa.py &  # RoBERTa系
 ```
 
+```shell
+nohup python train_BERT.py -p parameters.json > log_gen  &
+```
 ## Inference
 - 学習済みのモデルを用いて予測を実行
 ```shell

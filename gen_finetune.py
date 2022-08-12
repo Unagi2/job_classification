@@ -5,7 +5,7 @@ from os.path import isdir
 import argparse
 import numpy as np
 from config import common_args, Parameters
-from utils import setup_params, get_device
+from utils import setup_params, get_device, set_logging
 import logging
 import pandas as pd
 from typing import Any
@@ -14,6 +14,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, random_split
 from transformers import GPT2Tokenizer, TrainingArguments, Trainer, GPT2LMHeadModel
 from bs4 import BeautifulSoup
+import gc
 
 logger = logging.getLogger(__name__)
 
@@ -71,45 +72,59 @@ def gen_model(params, result_dir) -> None:
 
     # 読み込み
     descriptions = pd.read_csv(params.train_file_path)['description']
+    descriptions_test = pd.read_csv(params.test_file_path)['description']
+
+    # testデータ結合
+    descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
+
     # 不要タグの削除-クリーニング
     descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-    descriptions = descriptions.sample(100, random_state=params.seed)  # サンプル数削減(frac = 0.1)
+
+    # データ抽出数調節　<- ここが原因？　抽出方法の改善あるかも
+    # そのままではGPUメモリエラーのため，データ数削減(frac = 0.1) def 120 1200
+    descriptions = descriptions.sample(1200, random_state=params.seed)
     max_length = max([len(tokenizer.encode(description)) for description in descriptions])
 
+    # 学習データセット
     dataset = TrainDataset(descriptions, tokenizer, max_length=max_length)
     train_size = int(0.9 * len(dataset))
     train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
 
-    import gc
     gc.collect()
 
     logger.info('Training...')
     torch.cuda.empty_cache()
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     # 学習パラメータ
     training_args = TrainingArguments(output_dir=result_dir+"/", num_train_epochs=5, logging_steps=5000, save_steps=5000,
-                                      per_device_train_batch_size=2, per_device_eval_batch_size=2,
+                                      per_device_train_batch_size=1, per_device_eval_batch_size=1,
                                       warmup_steps=100, weight_decay=0.01, logging_dir=result_dir+"/", report_to='none')
 
     # 学習
-    Trainer(model=model, args=training_args, train_dataset=train_dataset,
-            eval_dataset=val_dataset,
-            data_collator=lambda data: {'input_ids': torch.stack([f[0] for f in data]),
-                                        'attention_mask': torch.stack([f[1] for f in data]),
-                                        'labels': torch.stack([f[0] for f in data])}).train()
-    # .save_model(result_dir + f'/out_model')
+    trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset,
+                      eval_dataset=val_dataset,
+                      data_collator=lambda data: {'input_ids': torch.stack([f[0] for f in data]),
+                                                  'attention_mask': torch.stack([f[1] for f in data]),
+                                                  'labels': torch.stack([f[0] for f in data])})
+    trainer.train()
+
+    # Save model
+    save_path = "./" + result_dir + "/gen_model"
+    trainer.save_model(output_dir=save_path)
+
     torch.cuda.empty_cache()
 
-    # 生成モデルからテキスト生成
-    generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
-
-    sample_outputs = model.generate(generated, do_sample=True, top_k=50,
-                                    max_length=300, top_p=0.95, temperature=1.9, num_return_sequences=20)
-
-    for i, sample_output in enumerate(sample_outputs):
-        print("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
-    print("============================================")
+    # # 生成モデルからテキスト生成
+    # generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
+    #
+    # sample_outputs = model.generate(generated, do_sample=True, top_k=50,
+    #                                 max_length=300, top_p=0.95, temperature=1.9, num_return_sequences=20)
+    #
+    # # サンプル生成テスト
+    # for i, sample_output in enumerate(sample_outputs):
+    #     print("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
+    # logger.info("============================================")
 
     #######################################################################################
     # 元データセットへの生成データの追加
@@ -120,25 +135,33 @@ def gen_model(params, result_dir) -> None:
 
     # 不要タグの削除-クリーニング
     df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+    # df_test['description'] = df_test['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
 
-    df_save = df
-    print(df_save.head())
+    # 保存用データフレームにコピー
+    df_save = df.copy()
 
     # 先頭３単語抽出
     df['description'] = df['description'].apply(lambda x: " ".join(re.findall(r"[a-zA-Z]+", x)[0:3]))
 
-    for i in range(1, label_num):
-        print("============================================")
-        print("label: " + str(i))
-        print("============================================")
+    for i in range(1, label_num+1):
+        logger.info("============================================")
+        logger.info("label: " + str(i))
+        logger.info("============================================")
+
+        # text MIN MAXの値が上手く動作していない．min9 max25
+        logger.info(min(df[df['jobflag'] == i].description.str.len()))
+
         for n, text in enumerate(df[df['jobflag'] == i].description):
-            print("label: " + str(i) + "  description-num: " + str(n))
-            print("============================================")
+            logger.info("label: " + str(i) + "  description-num: " + str(n))
+
             df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
             gen_num = int((params.sampling_num - df_size) / df_size)  # 生成回数
             txt_len_min = min(df[df['jobflag'] == i].description.str.len())
             txt_len_max = max(df[df['jobflag'] == i].description.str.len())
             df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
+
+            logger.info("text_len_MIN: " + str(txt_len_min) + " | text_len_MAX: " + str(txt_len_max))
+            logger.info("============================================")
 
             # ターゲットテキストの指定
             # target_text = text.split('.', 2)[0]  # + "."
@@ -148,9 +171,9 @@ def gen_model(params, result_dir) -> None:
             generated = tokenizer(target_text, return_tensors="pt").input_ids.cuda()
 
             # テキスト生成設定
+            # パラメータ:  num_beams=gen_num, no_repeat_ngram_size=2, early_stopping=True,
             sample_outputs = model.generate(generated, do_sample=True, top_k=50,
-                                            num_beams=gen_num, no_repeat_ngram_size=2, early_stopping=True,
-                                            min_length=int(txt_len_min), max_length=int(txt_len_max), top_p=0.95,
+                                            min_length=25, max_length=1000, top_p=0.95,
                                             num_return_sequences=gen_num)
 
             # 生成データ
@@ -165,13 +188,14 @@ def gen_model(params, result_dir) -> None:
                 print("{}: {}".format(s, tokenizer.decode(sample_output, skip_special_tokens=True).strip()))
 
                 # Concat処理　元データセットの末尾に追加
-                logger.info("Saving train_generated.csv...")
-                df_over = pd.concat([df_save, df_add], axis=0, ignore_index=True).reset_index()
+                logger.info("Dataframe Concat...")
+                df_save = pd.concat([df_save, df_add], axis=0, ignore_index=True).reset_index(drop=True)
 
-            print("============================================")
-            # logger.info(text)
+            logger.info("============================================")
 
-    df_over.to_csv('dataset/train_generated.csv')
+    logger.info("Saving train_generated.csv...")
+    df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
+    logger.info("Saved train_generated.csv")
 
 
 if __name__ == "__main__":
@@ -190,7 +214,13 @@ if __name__ == "__main__":
     result_dir = f'./result/{params.run_date}'  # 結果出力ディレクトリ
 
     os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
-    # os.mkdir(result_dir + "/gen_model")
+    os.mkdir(result_dir + "/gen_model")
+
+    # ログ設定
+    logger = logging.getLogger(__name__)
+    set_logging(result_dir)  # ログを標準出力とファイルに出力するよう設定
+    logger.info('parameters: ')
+    logger.info(params)
 
     # 生成モデル作成
     gen_model(params, result_dir)

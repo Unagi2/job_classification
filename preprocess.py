@@ -116,11 +116,11 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
     """
     logger.info('Loading Test Dataset...')
 
-    df = pd.read_csv(csv_file)  # ファイル読み込み
-
-    count_list = df["jobflag"].value_counts()
-
     if params.ros == True:
+        df = pd.read_csv(csv_file)  # ファイル読み込み
+
+        count_list = df["jobflag"].value_counts()
+
         # Class count オーバーサンプリング数指定用
         count_max = df["jobflag"].value_counts().max()
         # count_max = params.sampling_num
@@ -145,6 +145,11 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
         # print('Random over-sampling:')
         # print(df_over.jobflag.value_counts())
     else:
+        df = pd.read_csv(params.train_gen_file_path)  # ファイル読み込み
+        count_list = df["jobflag"].value_counts()
+
+        logger.info("Dataset value")
+        logger.info(df["jobflag"].value_counts())
         df_over = df
 
     # 不要タグの削除-クリーニング
@@ -162,8 +167,6 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
     for fold, (_, valid_indexes) in enumerate(skfold.split(range(len(label)), label)):
         for i in valid_indexes:
             df.iat[i, 3] = fold
-
-    # text_gen(params, df)
 
     return df
 

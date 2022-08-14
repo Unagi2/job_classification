@@ -6,6 +6,7 @@ import argparse
 from config import common_args, Parameters
 from inference import predict
 from model_BERT import Classifier
+from model_BERT_Conv import Classifier_Conv
 from preprocess import make_dataset, make_folded_df
 from utils import dump_params, setup_params, get_device, seed_everything
 from utils import set_logging
@@ -267,8 +268,10 @@ def trainer(params, fold, df, result_dir):
     valid_dataloader = torch.utils.data.DataLoader(
         valid_dataset, batch_size=params.valid_batch_size, shuffle=False
     )
-
-    model = Classifier(params.model_name, num_classes=params.num_classes)
+    if params.use_cnn:
+        model = Classifier_Conv(params.model_name, num_classes=params.num_classes)
+    else:
+        model = Classifier(params.model_name, num_classes=params.num_classes)
     model = model.to(params.device)
 
     if '/' in params.model_name:

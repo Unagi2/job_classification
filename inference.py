@@ -7,6 +7,7 @@ import logging
 import argparse
 from config import common_args, Parameters
 from model_BERT import Classifier
+from model_BERT_Conv import Classifier_Conv
 from model_RoBERTa import Classifier_RoBERTa
 from preprocess import make_dataset, make_dataset_roberta
 from utils import dump_params, setup_params, get_device
@@ -57,7 +58,10 @@ def predict(params, cv, result_dir) -> None:
         model_name_dir = params.model_name
 
     for fold in range(params.num_split):
-        model = Classifier(params.model_name)
+        if params.use_cnn:
+            model = Classifier_Conv(params.model_name, num_classes=params.num_classes)
+        else:
+            model = Classifier(params.model_name, num_classes=params.num_classes)
         model.load_state_dict(torch.load("./" + result_dir + "/" + params.models_dir + f"best_{model_name_dir}_{fold}.pth"))
         model.to(params.device)
         model.eval()

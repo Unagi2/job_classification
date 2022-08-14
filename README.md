@@ -51,7 +51,8 @@ python preprocess.py
 
 ## Training
 - 学習及び予測の実行
-nohup python train_BERT.py &
+nohup python train_BERT.py &  # BERT系
+nohup python train_RoBERTa.py &  # RoBERTa系
 
 ## Inference
 - 学習済みのモデルを用いて予測を実行

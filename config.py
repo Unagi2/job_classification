@@ -38,12 +38,12 @@ class Parameters:
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
     num_split: int = 5
-    seed: int = 43
+    seed: int = 44
     sampling_num: int = 10000
 
     # BERT訓練データパラメータ
     models_dir: str = "/models/"
-    model_name: str =  'roberta-base'
+    model_name: str =  'allenai/scibert_scivocab_uncased'
     # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 'roberta-base'
     # model_name_for_roberta: str = '' 
     train_batch_size: int = 32
@@ -53,7 +53,7 @@ class Parameters:
     load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
     batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
     data_length: float = float('inf')
-
+    use_cnn: bool = False  # BERTの最終層の後、1次元のConvolutionalネットワークを通すかどうか
     # param2: dict = field(default_factory=lambda: {'k1': 'v1', 'k2': 'v2'})  # リストや辞書で与える例
 
 

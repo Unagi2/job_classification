@@ -41,7 +41,7 @@ class Parameters:
     gen_model_name: str = 'distilgpt2'
     ros: bool = True  # オーバーサンプリングによってデータセットを増やすかどうか(Falseの場合生成済みファイルから読み込む)
     num_split: int = 5
-    seed: int = 43
+    seed: int = 44
     sampling_num: int = 10000
 
     # BERT訓練データパラメータ

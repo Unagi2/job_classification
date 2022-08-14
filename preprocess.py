@@ -196,6 +196,13 @@ def make_dataset(params, df, tokenizer) -> Any:
     """
     logger.info('Loading Test Dataset...')
 
+    # 不要タグの削除-クリーニング
+    logger.info('Cleaning Test Dataset...')
+    reg_obj = re.compile(r"<[^>]*?>")
+    df.descriptions = df.descriptions.apply(lambda x: reg_obj.sub("", x))
+    df.descriptions = df.descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+
+
     dataset = nlp.Dataset.from_pandas(df)
     dataset = dataset.map(
         lambda example: tokenizer(example["description"],

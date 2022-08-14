@@ -28,7 +28,6 @@ class Classifier_Conv(nn.Module):
             token_type_ids = token_type_ids,
             return_dict=True) # Pythonの実行上必要なので加筆しました。
         last_hidden_state = output['last_hidden_state'].permute(0, 2, 1)
-        output = self.dropout(output)
         output = F.relu(self.cnn1(last_hidden_state))
         output = self.dropout(output)
         output = self.cnn2(output)

@@ -84,7 +84,10 @@ def gen_model(params, result_dir) -> None:
         descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
 
         # 不要タグの削除-クリーニング
+        reg_obj = re.compile(r"<[^>]*?>")
+        descriptions = descriptions.apply(lambda x: reg_obj.sub("", x))
         descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+
         # descriptions = descriptions.apply(lambda x: x.replace('/s', ''))
 
         # データ抽出数調節　<- ここが原因？　抽出方法の改善あるかも
@@ -253,6 +256,8 @@ def gen_model(params, result_dir) -> None:
         index_num = df['id'].tail()
 
         # 不要タグの削除-クリーニング
+        reg_obj = re.compile(r"<[^>]*?>")
+        df['description'] = df['description'].apply(lambda x: reg_obj.sub("", x))
         df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
         # df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
 

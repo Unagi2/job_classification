@@ -219,8 +219,7 @@ def gen_model(params, result_dir) -> None:
         logger.info("Saved train_generated.csv")
 
     else:
-        print("load")
-        print(params.args['load_model'])
+        logger.info("load_model" + params.args['load_model'])
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
         # model path
@@ -326,7 +325,9 @@ def gen_model(params, result_dir) -> None:
                 logger.info("============================================")
 
         logger.info("Saving train_generated.csv...")
+
         df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
+
         logger.info("Saved train_generated.csv")
 
 

@@ -67,15 +67,12 @@ def gen_model(params, result_dir) -> None:
 
     torch.manual_seed(params.seed)
 
-    # model path
-    model_path = params.args['load_model']
-
     if not params.args['load_model']:
         print("non-load")
 
-        tokenizer = GPT2Tokenizer.from_pretrained(model_path, bos_token='<|startoftext|>',
+        tokenizer = GPT2Tokenizer.from_pretrained(params.gen_model_name, bos_token='<|startoftext|>',
                                                   eos_token='<|endoftext|>', pad_token='<|pad|>')
-        model = GPT2LMHeadModel.from_pretrained(model_path, pad_token_id=tokenizer.eos_token_id)  # .cuda()
+        model = GPT2LMHeadModel.from_pretrained(params.gen_model_name, pad_token_id=tokenizer.eos_token_id)  # .cuda()
         model = model.to(params.device)
         model.resize_token_embeddings(len(tokenizer))
 
@@ -88,6 +85,7 @@ def gen_model(params, result_dir) -> None:
 
         # 不要タグの削除-クリーニング
         descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+        # descriptions = descriptions.apply(lambda x: x.replace('/s', ''))
 
         # データ抽出数調節　<- ここが原因？　抽出方法の改善あるかも
         # そのままではGPUメモリエラーのため，データ数削減(frac = 0.1) def 120 1200
@@ -149,7 +147,7 @@ def gen_model(params, result_dir) -> None:
 
         # 不要タグの削除-クリーニング
         df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-        # df_test['description'] = df_test['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+        # df['description'] = df['description'].apply(lambda x: x.replace('\s', ''))
 
         # 保存用データフレームにコピー
         df_save = df.copy()
@@ -221,14 +219,15 @@ def gen_model(params, result_dir) -> None:
         print(params.args['load_model'])
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
+        # model path
+        load_model_path = params.args['load_model']
+
         # モデル設定　
-        tokenizer = GPT2Tokenizer.from_pretrained(model_path, bos_token='<|startoftext|>',
+        tokenizer = GPT2Tokenizer.from_pretrained(params.gen_model_name, bos_token='<|startoftext|>',
                                                   eos_token='<|endoftext|>', pad_token='<|pad|>')
-        model = GPT2LMHeadModel.from_pretrained(model_path, pad_token_id=tokenizer.eos_token_id) # .cuda()
+        model = GPT2LMHeadModel.from_pretrained(load_model_path, pad_token_id=tokenizer.eos_token_id) # .cuda()
         model = model.to(params.device)
         model.resize_token_embeddings(len(tokenizer))
-
-        # model = DataParallel(model, device_ids=[0, 1])
 
         torch.cuda.empty_cache()
 
@@ -252,7 +251,7 @@ def gen_model(params, result_dir) -> None:
 
         # 不要タグの削除-クリーニング
         df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-        # df_test['description'] = df_test['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+        # df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
 
         # 保存用データフレームにコピー
         df_save = df.copy()
@@ -301,7 +300,8 @@ def gen_model(params, result_dir) -> None:
                                                 num_beams=2, no_repeat_ngram_size=2, early_stopping=True,
                                                 min_length=txt_len_min, max_length=txt_len_max,
                                                 num_return_sequences=gen_num)
-                torch.cuda.empty_cache()
+                # torch.cuda.empty_cache()
+
                 # 生成データ
                 for s, sample_output in enumerate(sample_outputs):
                     # データフレームに追加 strip("'").

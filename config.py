@@ -51,9 +51,9 @@ class Parameters:
     valid_batch_size: int = 128
     num_classes: int = 4
     epoch: int = 5
-    # load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
-    # batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
-    # data_length: float = float('inf')
+    load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
+    batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
+    data_length: float = float('inf')
 
     # param2: dict = field(default_factory=lambda: {'k1': 'v1', 'k2': 'v2'})  # リストや辞書で与える例
 

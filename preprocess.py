@@ -19,6 +19,8 @@ from transformers import pipeline, set_seed
 from sklearn.model_selection import StratifiedKFold
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import numpy as np
+import math
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ def text_gen(params, df) -> Any:
     for i in range(0, label_num):
         for n, text in enumerate(df[df['labels'] == i].description):
             df_size = df[df['labels'] == i].description.size  # 1job当たりのデータサイズ
-            gen_num = int((params.sampling_num - df_size) / df_size)  # 生成回数
+            gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
             txt_len_min = df[df['labels'] == i].description.str.len().min()
             txt_len_max = df[df['labels'] == i].description.str.len().max()
             df_txt_len = df[df['labels'] == i].description.str.len().median()  # 生成文字列数

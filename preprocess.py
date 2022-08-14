@@ -203,6 +203,44 @@ def make_dataset(params, df, tokenizer) -> Any:
                        device=params.device)
     return dataset
 
+def make_dataset_roberta(params, df, tokenizer) -> Any:
+    """RoBERTa用に処理できるようなデータ形式に変換
+
+    Tokenizerを用いて文をIDに変換しデータセットを作成
+
+    Args:
+        params: パラメータ
+        df: 変換前データセット
+        tokenizer:
+
+    Returns:
+        datasets: 変換データセット
+
+    Examples:
+        関数の使い方
+
+    Raises:
+        例外の名前: 例外の説明
+
+    Yields:
+        戻り値の型: 戻り値についての説明
+
+    Note:
+        注意事項
+    """
+    logger.info('Loading Test Dataset...')
+
+    dataset = nlp.Dataset.from_pandas(df)
+    dataset = dataset.map(
+        lambda example: tokenizer(example["description"],
+                                  padding="max_length",
+                                  truncation=True,
+                                  max_length=128))
+    dataset.set_format(type='torch',
+                       columns=['input_ids', 'attention_mask', 'labels'],
+                       device=params.device)
+    return dataset
+
 
 if __name__ == "__main__":
     # import doctest

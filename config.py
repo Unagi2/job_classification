@@ -65,6 +65,7 @@ def common_args(parser):
     parser.add_argument('-r', '--restart_lstm', type=int, default=0, help='n回目のLSTM学習からスタート')
     parser.add_argument('-l', '--load_model', default=None, type=str, help='ロードするモデルがあるディレクトリ')
     parser.add_argument('-s', '--save', type=str, default='result/', help='学習済みモデルを保存するディレクトリ')
+    parser.add_argument('--roberta', action='store_true', help='学習済みモデルを保存するディレクトリ')
     # parser.add_argument("-a", "--arg1", type=int, help="arg1の説明", default=0)  # コマンドライン引数を指定
     # parser.add_argument("--prediction_distance", type=float, help="arg2の説明", default=1.0)  # コマンドライン引数を指定
     return parser

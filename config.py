@@ -46,9 +46,7 @@ class Parameters:
 
     # BERT訓練データパラメータ
     models_dir: str = "/models/"
-    model_name: str =  'allenai/scibert_scivocab_uncased'
-    # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 'roberta-base'
-    # model_name_for_roberta: str = ''
+    model_name: str =  'allenai/scibert_scivocab_uncased'  # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 
     train_batch_size: int = 32
     valid_batch_size: int = 128
     num_classes: int = 4

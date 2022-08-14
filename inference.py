@@ -1,20 +1,8 @@
 """
 学習モデルを用いて推論を行う
 """
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-from genericpath import isdir
-=======
->>>>>>> 1e49b58 (BERTの実装)
-=======
->>>>>>> 4b9fff2 (inherence.pyを修正)
->>>>>>> 6daae07 (inherence.pyを修正)
-=======
->>>>>>> e3f7ede (inference.pyを修正)
 import os
+from os.path import isdir
 import logging
 import argparse
 from os.path import isdir
@@ -25,44 +13,14 @@ from model_BERT_Conv import Classifier_Conv
 from model_RoBERTa import Classifier_RoBERTa
 from preprocess import make_dataset, make_dataset_roberta
 from utils import dump_params, setup_params, get_device
-<<<<<<< HEAD
-<<<<<<< HEAD
 from utils import set_logging
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-from utils import set_logging
-=======
->>>>>>> 1e49b58 (BERTの実装)
-=======
-from utils import set_logging
->>>>>>> 4b9fff2 (inherence.pyを修正)
->>>>>>> 6daae07 (inherence.pyを修正)
-=======
-from utils import set_logging
->>>>>>> e3f7ede (inference.pyを修正)
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AdamW, AutoModel, AutoTokenizer
 from bs4 import BeautifulSoup
-<<<<<<< HEAD
-<<<<<<< HEAD
 import shutil
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-import shutil
-=======
->>>>>>> 1e49b58 (BERTの実装)
-=======
-import shutil
->>>>>>> 4b9fff2 (inherence.pyを修正)
->>>>>>> 6daae07 (inherence.pyを修正)
-=======
-import shutil
->>>>>>> e3f7ede (inference.pyを修正)
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +112,6 @@ def predict(params, cv, result_dir) -> None:
         submit.to_csv("./" + result_dir + "/output/submission.csv", index=False, header=False)
 
     logger.info('Inference complete!')
-<<<<<<< HEAD
 
 def predict_roberta(params, cv, result_dir) -> None:
     """推論の実行
@@ -241,8 +198,6 @@ def predict_roberta(params, cv, result_dir) -> None:
 
     logger.info('Inference complete!')
 
-=======
->>>>>>> e3f7ede (inference.pyを修正)
 
 if __name__ == "__main__":
     # import doctest

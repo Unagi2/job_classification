@@ -35,10 +35,11 @@ class Parameters:
 
     # データセットパラメータ
     train_file_path: str = "./dataset/train.csv"
+    train_gen_file_path: str = "./dataset/train_generated.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
-    gen_model_name: str = 'gpt2-large'
-    ros: bool = True
+    gen_model_name: str = 'distilgpt2'
+    ros: bool = False
     num_split: int = 5
     seed: int = 44
     sampling_num: int = 10000
@@ -47,7 +48,7 @@ class Parameters:
     models_dir: str = "/models/"
     model_name: str =  'allenai/scibert_scivocab_uncased'
     # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 'roberta-base'
-    # model_name_for_roberta: str = '' 
+    # model_name_for_roberta: str = ''
     train_batch_size: int = 32
     valid_batch_size: int = 128
     num_classes: int = 4

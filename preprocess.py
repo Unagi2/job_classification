@@ -2,22 +2,21 @@
 データセットの準備など，前処理のモジュール
 """
 import os
+import re
 import argparse
-import numpy as np
 from config import common_args, Parameters
+from gen_finetune import clean_txt
 from utils import dump_params, setup_params, get_device
 from utils import set_logging
 import logging
 from typing import Any
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import nlp
-from bs4 import BeautifulSoup
-from transformers import pipeline, set_seed
 from sklearn.model_selection import StratifiedKFold
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import numpy as np
+import math
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ def text_gen(params, df) -> Any:
     for i in range(0, label_num):
         for n, text in enumerate(df[df['labels'] == i].description):
             df_size = df[df['labels'] == i].description.size  # 1job当たりのデータサイズ
-            gen_num = int((params.sampling_num - df_size) / df_size)  # 生成回数
+            gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
             txt_len_min = df[df['labels'] == i].description.str.len().min()
             txt_len_max = df[df['labels'] == i].description.str.len().max()
             df_txt_len = df[df['labels'] == i].description.str.len().median()  # 生成文字列数
@@ -115,11 +114,11 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
     """
     logger.info('Loading Test Dataset...')
 
-    df = pd.read_csv(csv_file)  # ファイル読み込み
-
-    count_list = df["jobflag"].value_counts()
-
     if params.ros == True:
+        df = pd.read_csv(csv_file)  # ファイル読み込み
+
+        count_list = df["jobflag"].value_counts()
+
         # Class count オーバーサンプリング数指定用
         count_max = df["jobflag"].value_counts().max()
         # count_max = params.sampling_num
@@ -144,10 +143,15 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
         # print('Random over-sampling:')
         # print(df_over.jobflag.value_counts())
     else:
+        df = pd.read_csv(params.train_gen_file_path)  # ファイル読み込み
+        count_list = df["jobflag"].value_counts()
+
+        logger.info("Dataset value")
+        logger.info(df["jobflag"].value_counts())
         df_over = df
 
-    # 不要タグの削除-クリーニング
-    df_over['description'] = df_over['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+    # クリーニング
+    df_over['description'] = clean_txt(df_over['description'])
 
     df = df_over
     df["jobflag"] = df["jobflag"] - 1
@@ -159,8 +163,6 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
     for fold, (_, valid_indexes) in enumerate(skfold.split(range(len(label)), label)):
         for i in valid_indexes:
             df.iat[i, 3] = fold
-
-    # text_gen(params, df)
 
     return df
 

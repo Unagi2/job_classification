@@ -35,11 +35,11 @@ class Parameters:
 
     # データセットパラメータ
     train_file_path: str = "./dataset/train.csv"
-    train_gen_file_path: str = ""
+    train_gen_file_path: str = "./dataset/train_generated.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
-    gen_model_name: str = 'gpt2-large'
-    ros: bool = True
+    gen_model_name: str = 'distilgpt2'
+    ros: bool = False
     num_split: int = 5
     seed: int = 43
     sampling_num: int = 10000

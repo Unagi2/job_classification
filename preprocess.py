@@ -4,7 +4,6 @@
 import os
 import re
 import argparse
-import numpy as np
 from config import common_args, Parameters
 from gen_finetune import clean_txt
 from utils import dump_params, setup_params, get_device
@@ -12,11 +11,7 @@ from utils import set_logging
 import logging
 from typing import Any
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import nlp
-from bs4 import BeautifulSoup
-from transformers import pipeline, set_seed
 from sklearn.model_selection import StratifiedKFold
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import numpy as np
@@ -155,10 +150,8 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
         logger.info(df["jobflag"].value_counts())
         df_over = df
 
-    # 不要タグの削除-クリーニング
-    # df_over['description'] = df_over['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+    # クリーニング
     df_over['description'] = clean_txt(df_over['description'])
-    # df_over['description'] = df_over['description'].apply(lambda x: re.findall(r"[a-zA-Z]+", x))
 
     df = df_over
     df["jobflag"] = df["jobflag"] - 1

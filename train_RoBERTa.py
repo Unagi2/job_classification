@@ -277,8 +277,8 @@ def trainer(params, fold, df, result_dir):
         model_name_dir = params.model_name
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = AdamW(model.parameters(), lr=2e-5)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=1.0)
+    optimizer = AdamW(model.parameters(), lr=params.lr)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=params.gamma)
     # ダミーのスケジューラー
 
     train_losses = []

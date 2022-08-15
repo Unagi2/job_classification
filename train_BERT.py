@@ -3,6 +3,7 @@
 """
 import os
 import argparse
+from tabnanny import verbose
 from config import common_args, Parameters
 from inference import predict
 from model_BERT import Classifier
@@ -280,8 +281,8 @@ def trainer(params, fold, df, result_dir):
         model_name_dir = params.model_name
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = AdamW(model.parameters(), lr=2e-5)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=1.0)
+    optimizer = optim.AdamW(model.parameters(), lr=params.lr)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=params.gamma, verbose=True)
     # ダミーのスケジューラー
 
     train_losses = []

@@ -41,6 +41,7 @@ def clean_txt(df) -> Any:
     reg_obj = re.compile(r"<[^>]*?>")
     df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
     df = df.apply(lambda x: x.lstrip())
+
     # descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
     # reg_kanji = re.compile(u'[一-龥]')
     # reg_han = re.compile('[\u0000-\u007F]+')
@@ -202,11 +203,7 @@ def gen_model(params, result_dir) -> None:
                 # 先頭３単語抽出
                 text = re.findall(r"[a-zA-Z]+", text)[0:3]
                 map_text = map(str, text)
-                text = " ".join(map_text)
-
-                # ターゲットテキストの指定
-                # target_text = text.split('.', 2)[0]  # + "."
-                target_text = text
+                target_text = " ".join(map_text)
 
                 # 生成準備
                 generated = tokenizer(target_text, return_tensors="pt").input_ids.cuda()

@@ -41,12 +41,17 @@ class Parameters:
     gen_model_name: str = 'distilgpt2'
     ros: bool = False
     num_split: int = 5
-    seed: int = 44
+    seed: int = 43
     sampling_num: int = 10000
 
     # BERT訓練データパラメータ
+    lr = 2e-5 # 学習率
+    gamma = 0.95  # スケジューラーの更新率. 1epochごとに学習率に乗算される.
+
     models_dir: str = "/models/"
-    model_name: str =  'allenai/scibert_scivocab_uncased'  # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 
+    model_name: str =  'allenai/scibert_scivocab_uncased'
+    # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 'roberta-base'
+    # model_name_for_roberta: str = '' 
     train_batch_size: int = 32
     valid_batch_size: int = 128
     num_classes: int = 4

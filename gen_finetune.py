@@ -41,7 +41,6 @@ def clean_txt(df) -> Any:
     reg_obj = re.compile(r"<[^>]*?>")
     df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
     df = df.apply(lambda x: x.lstrip())
-
     # descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
     # reg_kanji = re.compile(u'[一-龥]')
     # reg_han = re.compile('[\u0000-\u007F]+')
@@ -191,8 +190,6 @@ def gen_model(params, result_dir) -> None:
             logger.info(min(df[df['jobflag'] == i].description.str.len()))
 
             for n, text in enumerate(df[df['jobflag'] == i].description):
-                logger.info("label: " + str(i) + "  description-num: " + str(n))
-
                 df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
                 gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
                 txt_len_min = min(df[df['jobflag'] == i].description.str.len())

@@ -39,6 +39,22 @@ class TrainDataset(Dataset):
         return self.input_ids[idx], self.attn_masks[idx]
 
 
+def clean_txt(df) -> Any:
+    # 不要タグの削除-クリーニング
+    logger.info('Cleaning Test Dataset...')
+
+    reg_obj = re.compile(r"<[^>]*?>")
+    df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
+    df = df.apply(lambda x: x.lstrip())
+    # descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+    # reg_kanji = re.compile(u'[一-龥]')
+    # reg_han = re.compile('[\u0000-\u007F]+')
+    # df = df.apply(lambda x: reg_han.sub("", x))
+    # df = df.apply(lambda x: x.encode('cp932', errors='ignore').decode('cp932'))  # cp932文字コードに含まれない文字は削除
+
+    return df
+
+
 def gen_model(params, result_dir) -> None:
     """データセット作成と前処理
 
@@ -78,17 +94,21 @@ def gen_model(params, result_dir) -> None:
 
         # 読み込み
         descriptions = pd.read_csv(params.train_file_path)['description']
-        descriptions_test = pd.read_csv(params.test_file_path)['description']
 
         # testデータ結合
-        descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
+        # descriptions_test = pd.read_csv(params.test_file_path)['description']
+        # descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
 
         # 不要タグの削除-クリーニング
-        reg_obj = re.compile(r"<[^>]*?>")
-        descriptions = descriptions.apply(lambda x: reg_obj.sub("", x))
-        descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-
-        # descriptions = descriptions.apply(lambda x: x.replace('/s', ''))
+        # logger.info('Cleaning Test Dataset...')
+        # reg_obj = re.compile(r"<[^>]*?>")
+        # descriptions = descriptions.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
+        # # descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+        # descriptions = descriptions.apply(lambda x: x.encode('cp932', errors='ignore').decode('cp932'))  # cp932文字コードに含まれない文字は削除
+        # descriptions = descriptions.apply(lambda x: x.lstrip())
+        # descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
+        descriptions = clean_txt(descriptions)
+        descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
 
         # データ抽出数調節　<- ここが原因？　抽出方法の改善あるかも
         # そのままではGPUメモリエラーのため，データ数削減(frac = 0.1) def 120 1200
@@ -133,13 +153,14 @@ def gen_model(params, result_dir) -> None:
         # 生成モデルからテキスト生成
         generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
 
-        # sample_outputs = model.generate(generated, do_sample=True, top_k=50,
-        #                                 max_length=300, top_p=0.95, temperature=1.9, num_return_sequences=20)
+        sample_outputs = model.generate(generated, do_sample=True, top_k=50,
+                                        max_length=300, top_p=0.95, temperature=1.9, num_return_sequences=20)
 
-        sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
-                                        num_beams=2, no_repeat_ngram_size=2, early_stopping=True,
-                                        max_length=300,
-                                        num_return_sequences=20)
+        # sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
+        #                                 num_beams=2, no_repeat_ngram_size=2, early_stopping=True,
+        #                                 max_length=300,
+        #                                 num_return_sequences=20)
+
         # サンプル生成テスト
         for i, sample_output in enumerate(sample_outputs):
             logger.info("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
@@ -256,10 +277,14 @@ def gen_model(params, result_dir) -> None:
         index_num = df['id'].tail()
 
         # 不要タグの削除-クリーニング
-        reg_obj = re.compile(r"<[^>]*?>")
-        df['description'] = df['description'].apply(lambda x: reg_obj.sub("", x))
-        df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-        # df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+        # logger.info('Cleaning Test Dataset...')
+        # reg_obj = re.compile(r"<[^>]*?>")
+        # df['description'] = df['description'].apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
+        # # df['description'] = df['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+        # df['description'] = df['description'].apply(lambda x: x.encode('cp932', errors='ignore').decode('cp932'))  # cp932文字コードに含まれない文字は削除
+        # df['description'] = df['description'].apply(lambda x: x.lstrip())
+        # df.to_csv(result_dir + f'/dataset_clean.csv', index=False)
+        df['description'] = clean_txt(df['description'])
 
         # 保存用データフレームにコピー
         df_save = df.copy()
@@ -273,8 +298,6 @@ def gen_model(params, result_dir) -> None:
             logger.info(min(df[df['jobflag'] == i].description.str.len()))
 
             for n, text in enumerate(df[df['jobflag'] == i].description):
-                logger.info("label: " + str(i) + "  description-num: " + str(n))
-
                 df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
                 gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
                 # txt_len_min = min([len(tokenizer.encode(description)) for description in df[df['jobflag'] == i].description])
@@ -283,7 +306,8 @@ def gen_model(params, result_dir) -> None:
                 txt_len_max = max(df[df['jobflag'] == i].description.str.len())  # * 0.4
                 df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
 
-                logger.info("token_len_MIN: " + str(txt_len_min) + " | token_len_MAX: " + str(txt_len_max))
+                logger.info("label: " + str(i) + "  description-num: " + str(n) + "/" + str(df_size))
+                logger.info("txt_len_MIN: " + str(txt_len_min) + " | txt_len_MAX: " + str(txt_len_max))
                 logger.info("============================================")
 
                 # 先頭３単語抽出
@@ -305,7 +329,7 @@ def gen_model(params, result_dir) -> None:
                 # temperature=0.7, repetition_penalty=1.0,
                 # min_length=txt_len_min, max_length=txt_len_max,
                 sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
-                                                num_beams=2, no_repeat_ngram_size=2, early_stopping=True,
+                                                no_repeat_ngram_size=2,  # num_beams=2, early_stopping=True,
                                                 min_length=txt_len_min, max_length=txt_len_max,
                                                 num_return_sequences=gen_num)
                 # torch.cuda.empty_cache()

@@ -6,6 +6,7 @@ import re
 import argparse
 import numpy as np
 from config import common_args, Parameters
+from gen_finetune import clean_txt
 from utils import dump_params, setup_params, get_device
 from utils import set_logging
 import logging
@@ -155,8 +156,8 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
         df_over = df
 
     # 不要タグの削除-クリーニング
-    df_over['description'] = df_over['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-
+    # df_over['description'] = df_over['description'].apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
+    df_over['description'] = clean_txt(df_over['description'])
     # df_over['description'] = df_over['description'].apply(lambda x: re.findall(r"[a-zA-Z]+", x))
 
     df = df_over
@@ -199,13 +200,6 @@ def make_dataset(params, df, tokenizer) -> Any:
         注意事項
     """
     logger.info('Loading Test Dataset...')
-
-    # 不要タグの削除-クリーニング
-    logger.info('Cleaning Test Dataset...')
-    reg_obj = re.compile(r"<[^>]*?>")
-    df.descriptions = df.descriptions.apply(lambda x: reg_obj.sub("", x))
-    df.descriptions = df.descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-
 
     dataset = nlp.Dataset.from_pandas(df)
     dataset = dataset.map(

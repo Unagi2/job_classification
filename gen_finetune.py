@@ -41,7 +41,6 @@ def clean_txt(df) -> Any:
     reg_obj = re.compile(r"<[^>]*?>")
     df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
     df = df.apply(lambda x: x.lstrip())
-
     # descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
     # reg_kanji = re.compile(u'[一-龥]')
     # reg_han = re.compile('[\u0000-\u007F]+')

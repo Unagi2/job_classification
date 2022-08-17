@@ -33,6 +33,7 @@ def easy_data_augment(params, result_dir):
 
     df = pd.read_csv(data_original, index_col=0)
     df['description'] = clean_txt(df['description'])
+
     descriptions = []
     jobflags = []
     logger.info("Data Augmenting...")

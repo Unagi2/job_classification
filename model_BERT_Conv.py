@@ -17,9 +17,9 @@ class Classifier_Conv(nn.Module):
         self.dropout = nn.Dropout(0.1)
         self.cnn1 = nn.Conv1d(self.config.hidden_size, 256, kernel_size=2, padding=1)
         self.cnn2 = nn.Conv1d(256, 4, kernel_size=2, padding=1)
-        self.linear = nn.Linear(768, num_classes)
-        nn.init.normal_(self.linear.weight, std=0.02)
-        nn.init.zeros_(self.linear.bias)
+        # self.linear = nn.Linear(768, num_classes)
+        # nn.init.normal_(self.linear.weight, std=0.02)
+        # nn.init.zeros_(self.linear.bias)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output = self.bert(

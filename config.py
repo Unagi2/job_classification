@@ -34,19 +34,19 @@ class Parameters:
     device: str = 'cuda:0'  # デバイス
 
     # データセットパラメータ
-    train_file_path: str = "./dataset/train.csv"
-    train_gen_file_path: str = "./dataset/train_generated.csv"
+    train_file_path: str = "./dataset/train_augmented.csv"
+    train_gen_file_path: str = "./dataset/train_augmented.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
     gen_model_name: str = 'distilgpt2'
-    ros: bool = False
+    ros: bool = False  # オーバーサンプリングによってデータセットを増やすかどうか(Falseの場合生成済みファイルから読み込む)
     num_split: int = 5
     seed: int = 45
     sampling_num: int = 10000
 
     # BERT訓練データパラメータ
     lr = 2e-5 # 学習率
-    gamma = 0.95  # スケジューラーの更新率. 1epochごとに学習率に乗算される.
+    gamma = 0.8  # スケジューラーの更新率. 1epochごとに学習率に乗算される.
 
     models_dir: str = "/models/"
     model_name: str =  'allenai/scibert_scivocab_uncased'
@@ -56,10 +56,10 @@ class Parameters:
     valid_batch_size: int = 128
     num_classes: int = 4
     epoch: int = 5
-    load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
-    batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
-    data_length: float = float('inf')
     use_cnn: bool = True  # BERTの最終層の後、1次元のConvolutionalネットワークを通すかどうか
+    # load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
+    # batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
+    # data_length: float = float('inf')
     # param2: dict = field(default_factory=lambda: {'k1': 'v1', 'k2': 'v2'})  # リストや辞書で与える例
 
     # Data Augmentationで与えるパラメータ

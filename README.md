@@ -66,8 +66,10 @@ python gen_finetune.py -p parameters.json -l ./result/[date]/gen_model
 
 ## Training
 - 学習及び予測の実行
+```shell
 nohup python train_BERT.py &  # BERT系
 nohup python train_RoBERTa.py &  # RoBERTa系
+```
 
 ```shell
 nohup python train_BERT.py -p parameters.json > log_gen  &

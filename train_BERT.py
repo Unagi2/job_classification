@@ -319,6 +319,7 @@ def trainer(params, fold, df, result_dir):
             best_f1 = valid_f1
             logger.info("model saving!")
             torch.save(model.state_dict(), "./" + result_dir + params.models_dir + f"best_{model_name_dir}_{fold}.pth")
+
         # logger.info("\n")
 
     return best_f1
@@ -395,6 +396,7 @@ if __name__ == "__main__":
 
     # 結果出力用ファイルの作成
     result_dir = f'result/{params.run_date}'  # 結果出力ディレクトリ
+
     os.mkdir(result_dir)  # 実行日時を名前とするディレクトリを作成
     os.mkdir(result_dir + "/figures")
     os.mkdir(result_dir + "/models")

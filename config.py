@@ -34,15 +34,15 @@ class Parameters:
     device: str = 'cuda:0'  # デバイス
 
     # データセットパラメータ
-    train_file_path: str = "./dataset/train_augmented.csv"
-    train_gen_file_path: str = "./dataset/train_augmented.csv"
+    train_file_path: str = "./dataset/train.csv"
+    train_gen_file_path: str = "./dataset/train_generated.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
     gen_model_name: str = 'distilgpt2'
     ros: bool = False  # オーバーサンプリングによってデータセットを増やすかどうか(Falseの場合生成済みファイルから読み込む)
     num_split: int = 5
     seed: int = 45
-    sampling_num: int = 10000
+    sampling_num: int = 4000
 
     # BERT訓練データパラメータ
     lr = 2e-5 # 学習率

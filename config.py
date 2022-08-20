@@ -38,11 +38,17 @@ class Parameters:
     train_gen_file_path: str = "./dataset/train_generated.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
+
+    # 生成パラメータ
+    # 候補　'xlnet-base-cased', 'distilgpt2'
     gen_model_name: str = 'distilgpt2'
     ros: bool = False
     num_split: int = 5
     seed: int = 44
-    sampling_num: int = 10000
+    sampling_num: int = 4000
+    input_words_num: int = 7
+    min_length: int = 100
+    max_length: int = 1000
 
     # BERT訓練データパラメータ
     models_dir: str = "/models/"

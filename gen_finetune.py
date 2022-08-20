@@ -13,6 +13,7 @@ from typing import Any
 import torch
 from torch.utils.data import Dataset, random_split
 from transformers import GPT2Tokenizer, TrainingArguments, Trainer, GPT2LMHeadModel
+from transformers import XLNetTokenizer, XLNetModel
 import nlpaug.augmenter.sentence as nas
 import nlpaug.augmenter.word as naw
 from transformers import AutoModelWithLMHead, AutoTokenizer
@@ -91,75 +92,88 @@ def gen_model(params, result_dir) -> None:
     if not params.args['load_model']:
         print("non-load")
 
-        tokenizer = GPT2Tokenizer.from_pretrained(params.gen_model_name, bos_token='<|startoftext|>',
-                                                  eos_token='<|endoftext|>', pad_token='<|pad|>')
-        model = GPT2LMHeadModel.from_pretrained(params.gen_model_name, pad_token_id=tokenizer.eos_token_id)  # .cuda()
-        model = model.to(params.device)
-        model.resize_token_embeddings(len(tokenizer))
+        if params.gen_model_name == 'distilgpt2':
+            tokenizer = GPT2Tokenizer.from_pretrained(params.gen_model_name, bos_token='<|startoftext|>',
+                                                      eos_token='<|endoftext|>', pad_token='<|pad|>')
+            model = GPT2LMHeadModel.from_pretrained(params.gen_model_name, pad_token_id=tokenizer.eos_token_id)  # .cuda()
 
-        # 読み込み
-        descriptions = pd.read_csv(params.train_file_path)['description']
+            model = model.to(params.device)
+            model.resize_token_embeddings(len(tokenizer))
 
-        # testデータ結合
-        descriptions_test = pd.read_csv(params.test_file_path)['description']
-        descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
+            # 読み込み
+            descriptions = pd.read_csv(params.train_file_path)['description']
 
-        # クリーニング
-        descriptions = clean_txt(descriptions)
-        descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
+            # testデータ結合
+            descriptions_test = pd.read_csv(params.test_file_path)['description']
+            descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
 
-        max_length = max([len(tokenizer.encode(description)) for description in descriptions])
+            # クリーニング
+            descriptions = clean_txt(descriptions)
+            descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
 
-        # 学習データセット
-        dataset = TrainDataset(descriptions, tokenizer, max_length=max_length)
-        train_size = int(0.9 * len(dataset))
-        train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
+            max_length = max([len(tokenizer.encode(description)) for description in descriptions])
 
-        gc.collect()
+            # 学習データセット
+            dataset = TrainDataset(descriptions, tokenizer, max_length=max_length)
+            train_size = int(0.9 * len(dataset))
+            train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
 
-        logger.info('Training...')
-        torch.cuda.empty_cache()
-        # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+            gc.collect()
 
-        save_path = "./" + result_dir + "/gen_model"
+            logger.info('Training...')
+            torch.cuda.empty_cache()
+            # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-        # 学習パラメータ report_to='none'
-        training_args = TrainingArguments(output_dir=save_path, num_train_epochs=10, logging_steps=5000, save_steps=10000,
-                                          per_device_train_batch_size=1, per_device_eval_batch_size=1,
-                                          warmup_steps=100, weight_decay=0.01, logging_dir=result_dir+"/",
-                                          load_best_model_at_end=True,
-                                          evaluation_strategy='epoch', save_strategy='epoch',
-                                          save_total_limit=1,
-                                          )
+            save_path = "./" + result_dir + "/gen_model"
 
-        # 学習
-        trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset,
-                          eval_dataset=val_dataset,
-                          data_collator=lambda data: {'input_ids': torch.stack([f[0] for f in data]),
-                                                      'attention_mask': torch.stack([f[1] for f in data]),
-                                                      'labels': torch.stack([f[0] for f in data])})
-        trainer.train()
+            # 学習パラメータ report_to='none'
+            training_args = TrainingArguments(output_dir=save_path, num_train_epochs=10, logging_steps=5000, save_steps=10000,
+                                              per_device_train_batch_size=1, per_device_eval_batch_size=1,
+                                              warmup_steps=100, weight_decay=0.01, logging_dir=result_dir+"/",
+                                              load_best_model_at_end=True,
+                                              evaluation_strategy='epoch', save_strategy='epoch',
+                                              save_total_limit=1,
+                                              )
 
-        # Save model
-        trainer.save_model()
+            # 学習
+            trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset,
+                              eval_dataset=val_dataset,
+                              data_collator=lambda data: {'input_ids': torch.stack([f[0] for f in data]),
+                                                          'attention_mask': torch.stack([f[1] for f in data]),
+                                                          'labels': torch.stack([f[0] for f in data])})
+            trainer.train()
 
-        torch.cuda.empty_cache()
+            # Save model
+            trainer.save_model()
 
-        # 生成モデルからテキスト生成
-        generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
+            torch.cuda.empty_cache()
 
-        sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
-                                        no_repeat_ngram_size=2,
-                                        max_length=300, num_return_sequences=20)
+            # 生成モデルからテキスト生成
+            generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
 
-        # サンプル生成テスト
-        for i, sample_output in enumerate(sample_outputs):
-            logger.info("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
-        logger.info("============================================")
+            sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
+                                            no_repeat_ngram_size=2,
+                                            max_length=300, num_return_sequences=20)
 
-        logger.info("Saving train_generated.csv...")
-        # df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
-        logger.info("Saved train_generated.csv")
+            # サンプル生成テスト
+            for i, sample_output in enumerate(sample_outputs):
+                logger.info("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
+            logger.info("============================================")
+
+            logger.info("Saving train_generated.csv...")
+            # df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
+            logger.info("Saved train_generated.csv")
+
+        else:
+            # 読み込み
+            descriptions = pd.read_csv(params.train_file_path)['description']
+            # testデータ結合
+            descriptions_test = pd.read_csv(params.test_file_path)['description']
+            descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(
+                drop=True).copy()
+
+            generator = pipeline("text-generation", model="xlnet-base-cased")
+            print(generator("Develop cutting-edge web applications "))
 
     else:
         logger.info("load_model" + params.args['load_model'])
@@ -213,7 +227,7 @@ def gen_model(params, result_dir) -> None:
                 logger.info("============================================")
 
                 # 先頭３単語抽出 def 3
-                text = re.findall(r"[a-zA-Z]+", text)[0:3]
+                text = re.findall(r"[a-zA-Z]+", text)[0:7]
                 map_text = map(str, text)
                 target_text = " ".join(map_text)
 
@@ -235,7 +249,7 @@ def gen_model(params, result_dir) -> None:
                 # min_length=txt_len_min, max_length=txt_len_max,
                 sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
                                                 no_repeat_ngram_size=2,
-                                                min_length=int(txt_len_min), max_length=int(txt_len_sent*1.2),
+                                                min_length=int(100), max_length=int(1000),
                                                 num_return_sequences=gen_num)
                 # sample_outputs = model.generate(generated, num_beams=gen_num, max_length=txt_len_max,
                 #                                 num_return_sequences=gen_num)
@@ -251,11 +265,13 @@ def gen_model(params, result_dir) -> None:
                     # Source出力
                     # output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").lstrip()
 
-                    # Data Aug処理
-                    aug = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="substitute", device='cuda')
+                    # Data Aug処理 bert-base-uncased distilbert-base-uncased roberta-base
+                    aug = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="insert", device='cuda')
                     augmented_text = str(aug.augment(target_text)[0]).capitalize()
 
                     output_text = augmented_text + " " + output_text
+
+                    output_text = output_text.replace(' ,', ',').replace(' .', '.').replace('  ', ' ').replace(' e g ', 'e.g')
 
                     # print("Original:")
                     # print(target_text)

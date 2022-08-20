@@ -2,6 +2,9 @@ import math
 import os
 import re
 import argparse
+
+import nltk
+
 from config import common_args, Parameters
 from utils import setup_params, get_device, set_logging, dump_params
 import logging
@@ -10,7 +13,14 @@ from typing import Any
 import torch
 from torch.utils.data import Dataset, random_split
 from transformers import GPT2Tokenizer, TrainingArguments, Trainer, GPT2LMHeadModel
+from transformers import XLNetTokenizer, XLNetModel
+import nlpaug.augmenter.sentence as nas
+import nlpaug.augmenter.word as naw
+from transformers import AutoModelWithLMHead, AutoTokenizer
 from bs4 import BeautifulSoup
+from transformers import pipeline
+from nltk import tokenize
+from nltk.tokenize import word_tokenize
 import gc
 
 logger = logging.getLogger(__name__)
@@ -82,75 +92,88 @@ def gen_model(params, result_dir) -> None:
     if not params.args['load_model']:
         print("non-load")
 
-        tokenizer = GPT2Tokenizer.from_pretrained(params.gen_model_name, bos_token='<|startoftext|>',
-                                                  eos_token='<|endoftext|>', pad_token='<|pad|>')
-        model = GPT2LMHeadModel.from_pretrained(params.gen_model_name, pad_token_id=tokenizer.eos_token_id)  # .cuda()
-        model = model.to(params.device)
-        model.resize_token_embeddings(len(tokenizer))
+        if params.gen_model_name == 'distilgpt2':
+            tokenizer = GPT2Tokenizer.from_pretrained(params.gen_model_name, bos_token='<|startoftext|>',
+                                                      eos_token='<|endoftext|>', pad_token='<|pad|>')
+            model = GPT2LMHeadModel.from_pretrained(params.gen_model_name, pad_token_id=tokenizer.eos_token_id)  # .cuda()
 
-        # 読み込み
-        descriptions = pd.read_csv(params.train_file_path)['description']
+            model = model.to(params.device)
+            model.resize_token_embeddings(len(tokenizer))
 
-        # testデータ結合
-        descriptions_test = pd.read_csv(params.test_file_path)['description']
-        descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
+            # 読み込み
+            descriptions = pd.read_csv(params.train_file_path)['description']
 
-        # クリーニング
-        descriptions = clean_txt(descriptions)
-        descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
+            # testデータ結合
+            descriptions_test = pd.read_csv(params.test_file_path)['description']
+            descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(drop=True).copy()
 
-        max_length = max([len(tokenizer.encode(description)) for description in descriptions])
+            # クリーニング
+            descriptions = clean_txt(descriptions)
+            descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
 
-        # 学習データセット
-        dataset = TrainDataset(descriptions, tokenizer, max_length=max_length)
-        train_size = int(0.9 * len(dataset))
-        train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
+            max_length = max([len(tokenizer.encode(description)) for description in descriptions])
 
-        gc.collect()
+            # 学習データセット
+            dataset = TrainDataset(descriptions, tokenizer, max_length=max_length)
+            train_size = int(0.9 * len(dataset))
+            train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
 
-        logger.info('Training...')
-        torch.cuda.empty_cache()
-        # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+            gc.collect()
 
-        save_path = "./" + result_dir + "/gen_model"
+            logger.info('Training...')
+            torch.cuda.empty_cache()
+            # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-        # 学習パラメータ report_to='none'
-        training_args = TrainingArguments(output_dir=save_path, num_train_epochs=10, logging_steps=5000, save_steps=10000,
-                                          per_device_train_batch_size=1, per_device_eval_batch_size=1,
-                                          warmup_steps=100, weight_decay=0.01, logging_dir=result_dir+"/",
-                                          load_best_model_at_end=True,
-                                          evaluation_strategy='epoch', save_strategy='epoch',
-                                          save_total_limit=1,
-                                          )
+            save_path = "./" + result_dir + "/gen_model"
 
-        # 学習
-        trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset,
-                          eval_dataset=val_dataset,
-                          data_collator=lambda data: {'input_ids': torch.stack([f[0] for f in data]),
-                                                      'attention_mask': torch.stack([f[1] for f in data]),
-                                                      'labels': torch.stack([f[0] for f in data])})
-        trainer.train()
+            # 学習パラメータ report_to='none'
+            training_args = TrainingArguments(output_dir=save_path, num_train_epochs=10, logging_steps=5000, save_steps=10000,
+                                              per_device_train_batch_size=1, per_device_eval_batch_size=1,
+                                              warmup_steps=100, weight_decay=0.01, logging_dir=result_dir+"/",
+                                              load_best_model_at_end=True,
+                                              evaluation_strategy='epoch', save_strategy='epoch',
+                                              save_total_limit=1,
+                                              )
 
-        # Save model
-        trainer.save_model()
+            # 学習
+            trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset,
+                              eval_dataset=val_dataset,
+                              data_collator=lambda data: {'input_ids': torch.stack([f[0] for f in data]),
+                                                          'attention_mask': torch.stack([f[1] for f in data]),
+                                                          'labels': torch.stack([f[0] for f in data])})
+            trainer.train()
 
-        torch.cuda.empty_cache()
+            # Save model
+            trainer.save_model()
 
-        # 生成モデルからテキスト生成
-        generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
+            torch.cuda.empty_cache()
 
-        sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
-                                        no_repeat_ngram_size=2,
-                                        max_length=300, num_return_sequences=20)
+            # 生成モデルからテキスト生成
+            generated = tokenizer("<|startoftext|> ", return_tensors="pt").input_ids.cuda()
 
-        # サンプル生成テスト
-        for i, sample_output in enumerate(sample_outputs):
-            logger.info("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
-        logger.info("============================================")
+            sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
+                                            no_repeat_ngram_size=2,
+                                            max_length=300, num_return_sequences=20)
 
-        logger.info("Saving train_generated.csv...")
-        # df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
-        logger.info("Saved train_generated.csv")
+            # サンプル生成テスト
+            for i, sample_output in enumerate(sample_outputs):
+                logger.info("{}: {}".format(i, tokenizer.decode(sample_output, skip_special_tokens=True)))
+            logger.info("============================================")
+
+            logger.info("Saving train_generated.csv...")
+            # df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
+            logger.info("Saved train_generated.csv")
+
+        else:
+            # 読み込み
+            descriptions = pd.read_csv(params.train_file_path)['description']
+            # testデータ結合
+            descriptions_test = pd.read_csv(params.test_file_path)['description']
+            descriptions = pd.concat([descriptions, descriptions_test], axis=0, ignore_index=True).reset_index(
+                drop=True).copy()
+
+            generator = pipeline("text-generation", model="xlnet-base-cased")
+            print(generator("Develop cutting-edge web applications "))
 
     else:
         logger.info("load_model" + params.args['load_model'])
@@ -221,18 +244,28 @@ def gen_model(params, result_dir) -> None:
                 df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
                 gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
 
+                txt_len_sent = len(text)
                 txt_len_min = min(df[df['jobflag'] == i].description.str.len())
                 txt_len_max = max(df[df['jobflag'] == i].description.str.len())
+                txt_len_mean = int(df[df['jobflag'] == i].description.str.len().mean())
                 df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
 
                 logger.info("label: " + str(i) + "  description-num: " + str(n) + "/" + str(df_size))
                 logger.info("txt_len_MIN: " + str(txt_len_min) + " | txt_len_MAX: " + str(txt_len_max))
+                logger.info("txt_len_sent: " + str(txt_len_sent))
                 logger.info("============================================")
 
-                # 先頭３単語抽出
-                text = re.findall(r"[a-zA-Z]+", text)[0:3]
+                # 先頭３単語抽出 def 3
+                text = re.findall(r"[a-zA-Z]+", text)[0:7]
                 map_text = map(str, text)
                 target_text = " ".join(map_text)
+
+                # 一文抽出
+                # nltk.download('punkt')
+                # target_text = tokenize.sent_tokenize(text)[0] + "."
+
+                logger.info("Input text: " + str(target_text))
+                logger.info("============================================")
 
                 # 生成準備
                 generated = tokenizer(target_text, return_tensors="pt").input_ids
@@ -245,21 +278,60 @@ def gen_model(params, result_dir) -> None:
                 # min_length=txt_len_min, max_length=txt_len_max,
                 sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
                                                 no_repeat_ngram_size=2,
-                                                min_length=txt_len_min, max_length=txt_len_max,
+                                                min_length=int(100), max_length=int(1000),
                                                 num_return_sequences=gen_num)
+                # sample_outputs = model.generate(generated, num_beams=gen_num, max_length=txt_len_max,
+                #                                 num_return_sequences=gen_num)
 
                 # 生成データ
                 for s, sample_output in enumerate(sample_outputs):
+                    # 文頭３単語削除
+                    output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").replace(target_text, '').lstrip()
+
+                    # 先頭１センテンス削除
+                    # output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").split('.',1)[1].lstrip()
+
+                    # Source出力
+                    # output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").lstrip()
+
+                    # Data Aug処理 bert-base-uncased distilbert-base-uncased roberta-base
+                    aug = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="insert", device='cuda')
+                    augmented_text = str(aug.augment(target_text)[0]).capitalize()
+
+                    output_text = augmented_text + " " + output_text
+
+                    output_text = output_text.replace(' ,', ',').replace(' .', '.').replace('  ', ' ').replace(' e g ', 'e.g')
+
+                    # print("Original:")
+                    # print(target_text)
+                    # print("Augmented Text:")
+                    # print(augmented_text)
+
+                    # # 先頭３単語Fill Mask
+                    # fill_word = re.findall(r"[a-zA-Z]+", output_text)
+                    # fill_word = word_tokenize(output_text)
+                    #
+                    # # Fill masked 3
+                    # for k in range(0, 1):
+                    #     output_text = output_text.replace(str(fill_word[k]), '[MASK]', 1)
+                    #     # print(output_text)
+                    #
+                    #     # Masked Lanuage Modeling
+                    #     nlp = pipeline("fill-mask", device=0, model="ariesutiono/scibert-lm-v2-finetuned-20")
+                    #     output_text = nlp(output_text)
+                    #
+                    #     output_text = output_text[0]['sequence']
+                    #
+                    #     logger.info("{}: {}".format(k, output_text))
+
                     # データフレームに追加 strip("'").
-                    list_add = [
-                        [s + 1, tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " "),
-                         i]]
+                    list_add = [[s + 1, output_text, i]]
                     # print(list_add)
 
                     df_add = pd.DataFrame(data=list_add, columns=['id', 'description', 'jobflag'])
                     # print(df_add)
 
-                    logger.info("{}: {}".format(s, tokenizer.decode(sample_output, skip_special_tokens=True).strip()))
+                    logger.info("{}: {}".format(s, output_text))
 
                     # Concat処理　元データセットの末尾に追加
                     logger.info("Dataframe Concat...")
@@ -272,6 +344,66 @@ def gen_model(params, result_dir) -> None:
         df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
 
         logger.info("Saved train_generated.csv")
+
+
+def nlp_aug(params, result_dir) -> Any:
+    nltk.download('punkt')
+
+    # 元データセットへの生成データの追加
+    df = pd.read_csv(params.train_file_path)  # 読み込み
+
+    label_num = params.num_classes  # ラベル番号
+    index_num = df['id'].tail()
+
+    # クリーニング
+    df['description'] = clean_txt(df['description'])
+
+    # 保存用データフレームにコピー
+    df_save = df.copy()
+
+    for i in range(1, label_num + 1):
+        logger.info("============================================")
+        logger.info("label: " + str(i))
+        logger.info("============================================")
+
+        # text MIN MAXの値が上手く動作していない．min9 max25
+        logger.info(min(df[df['jobflag'] == i].description.str.len()))
+
+        for n, text in enumerate(df[df['jobflag'] == i].description):
+            df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
+            gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
+
+            txt_len_min = min(df[df['jobflag'] == i].description.str.len())
+            txt_len_max = max(df[df['jobflag'] == i].description.str.len())
+            txt_len_mean = int(df[df['jobflag'] == i].description.str.len().mean())
+            df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
+
+            logger.info("label: " + str(i) + "  description-num: " + str(n) + "/" + str(df_size))
+            logger.info("txt_len_MIN: " + str(txt_len_min) + " | txt_len_MAX: " + str(txt_len_max))
+            logger.info("============================================")
+
+            # Sentence Split
+            text = text.replace(".", ". ")
+
+            sent = tokenize.sent_tokenize(text)[0]
+
+            if str(sent[-1]) == ".":
+                pass
+            else:
+                sent += "."
+
+            logger.info("Input text: " + str(sent))
+            logger.info("============================================")
+
+            # model_path: xlnet-base-cased or gpt2
+            aug = nas.ContextualWordEmbsForSentenceAug(model_path='xlnet-base-cased', device='cuda', min_length=txt_len_mean)
+            augmented_texts = aug.augment(sent, n=3)
+            print("Original:")
+            print(sent)
+            print("Augmented Texts:")
+
+            for s in range(0, len(augmented_texts)):
+                print(augmented_texts[s].replace(sent, '').lstrip())
 
 
 if __name__ == "__main__":
@@ -301,3 +433,6 @@ if __name__ == "__main__":
 
     # 生成モデル作成
     gen_model(params, result_dir)
+
+    # NLP Aug
+    # nlp_aug(params, result_dir)

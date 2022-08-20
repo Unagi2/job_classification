@@ -40,11 +40,17 @@ class Parameters:
     train_eda_file_path: str = "./dataset/train_generated_remain3words_gpt2_x2.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
+
+    # 生成パラメータ
+    # 候補　'xlnet-base-cased', 'distilgpt2'
     gen_model_name: str = 'distilgpt2'
     ros: bool = False  # オーバーサンプリングによってデータセットを増やすかどうか(Falseの場合生成済みファイルから読み込む)
     num_split: int = 5
     seed: int = 45
     sampling_num: int = 4000
+    input_words_num: int = 7
+    min_length: int = 100
+    max_length: int = 1000
 
     # BERT訓練データパラメータ
     lr = 2e-5 # 学習率
@@ -53,7 +59,7 @@ class Parameters:
     models_dir: str = "/models/"
     model_name: str =  'allenai/scibert_scivocab_uncased'
     # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 'roberta-base'
-    # model_name_for_roberta: str = '' 
+    # model_name_for_roberta: str = ''
     train_batch_size: int = 32
     valid_batch_size: int = 128
     num_classes: int = 4

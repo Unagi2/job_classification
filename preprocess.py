@@ -115,6 +115,7 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
     logger.info('Loading Test Dataset...')
 
     if params.ros == True:
+        logger.info("Random oversampling...")
         df = pd.read_csv(csv_file)  # ファイル読み込み
 
         count_list = df["jobflag"].value_counts()
@@ -143,6 +144,7 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
         # print('Random over-sampling:')
         # print(df_over.jobflag.value_counts())
     else:
+        logger.info("Reading dataset file...")
         df = pd.read_csv(params.train_gen_file_path)  # ファイル読み込み
         count_list = df["jobflag"].value_counts()
 
@@ -152,6 +154,8 @@ def make_folded_df(params, csv_file, num_splits=5) -> Any:
 
     # クリーニング
     df_over['description'] = clean_txt(df_over['description'])
+
+    # df_over['description'] = df_over['description'].apply(lambda x: re.findall(r"[a-zA-Z]+", x))
 
     df = df_over
     df["jobflag"] = df["jobflag"] - 1

@@ -42,15 +42,18 @@ class Parameters:
     # 生成パラメータ
     # 候補　'xlnet-base-cased', 'distilgpt2'
     gen_model_name: str = 'distilgpt2'
-    ros: bool = False
+    ros: bool = False  # オーバーサンプリングによってデータセットを増やすかどうか(Falseの場合生成済みファイルから読み込む)
     num_split: int = 5
-    seed: int = 44
+    seed: int = 45
     sampling_num: int = 4000
     input_words_num: int = 7
     min_length: int = 100
     max_length: int = 1000
 
     # BERT訓練データパラメータ
+    lr = 2e-5 # 学習率
+    gamma = 0.8  # スケジューラーの更新率. 1epochごとに学習率に乗算される.
+
     models_dir: str = "/models/"
     model_name: str =  'allenai/scibert_scivocab_uncased'
     # 候補は'bert-base-uncased', 'allenai/scibert_scivocab_uncased', 'roberta-base'
@@ -59,11 +62,15 @@ class Parameters:
     valid_batch_size: int = 128
     num_classes: int = 4
     epoch: int = 5
-    load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
-    batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
-    data_length: float = float('inf')
-    use_cnn: bool = False  # BERTの最終層の後、1次元のConvolutionalネットワークを通すかどうか
+    use_cnn: bool = True  # BERTの最終層の後、1次元のConvolutionalネットワークを通すかどうか
+    # load_preprocessed_data: bool = True  # Trueなら処理済みファイルからロード
+    # batch_size: int = 1  # ミニバッチ作成のためのバッチサイズ(1,2,4,8,16,・・・,1024,2048,4096）
+    # data_length: float = float('inf')
     # param2: dict = field(default_factory=lambda: {'k1': 'v1', 'k2': 'v2'})  # リストや辞書で与える例
+
+    # Data Augmentationで与えるパラメータ
+    alpha_xx: float = 0.05  # 元の文章中の単語が加工される確率
+    num_aug: int = 8  # 一つの文章から生成される類似文章数
 
 
 def common_args(parser):

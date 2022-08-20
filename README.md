@@ -71,6 +71,9 @@ nohup python train_BERT.py &  # BERT系
 nohup python train_RoBERTa.py &  # RoBERTa系
 ```
 
+```shell
+nohup python train_BERT.py -p parameters.json > log_gen  &
+```
 ## Inference
 - 学習済みのモデルを用いて予測を実行
 ```shell

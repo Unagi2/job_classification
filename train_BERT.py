@@ -83,7 +83,7 @@ def train_fn(dataloader, model, criterion, optimizer, scheduler, device, epoch):
 
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        # print(optimizer.param_groups[0]['lr'])
 
         total_loss += loss.item()
         del loss
@@ -95,6 +95,7 @@ def train_fn(dataloader, model, criterion, optimizer, scheduler, device, epoch):
 
         progress.set_postfix(loss=total_loss / (i + 1), f1=f1_score(all_labels, all_preds, average="macro"))
 
+    scheduler.step()
     train_loss = total_loss / len(dataloader)
     train_acc = total_corrects.double().cpu().detach().numpy() / len(dataloader.dataset)
     train_f1 = f1_score(all_labels, all_preds, average="macro")
@@ -280,8 +281,8 @@ def trainer(params, fold, df, result_dir):
         model_name_dir = params.model_name
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=2e-5)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=1.0)
+    optimizer = optim.AdamW(model.parameters(), lr=params.lr)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=params.gamma)
     # ダミーのスケジューラー
 
     train_losses = []

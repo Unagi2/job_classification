@@ -207,6 +207,35 @@ def gen_model(params, result_dir) -> None:
             logger.info("============================================")
             logger.info("label: " + str(i))
             logger.info("============================================")
+            logger.info("label: " + str(i))
+            logger.info("============================================")
+
+            # text MIN MAXの値が上手く動作していない．min9 max25
+            logger.info(min(df[df['jobflag'] == i].description.str.len()))
+
+            for n, text in enumerate(df[df['jobflag'] == i].description):
+                df_size = df[df['jobflag'] == i].description.size  # 1job当たりのデータサイズ
+                gen_num = math.ceil((params.sampling_num - df_size) / df_size)  # 生成回数
+                txt_len_min = min(df[df['jobflag'] == i].description.str.len())
+                txt_len_max = max(df[df['jobflag'] == i].description.str.len())
+                df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
+
+                logger.info("text_len_MIN: " + str(txt_len_min) + " | text_len_MAX: " + str(txt_len_max))
+                logger.info("============================================")
+
+                # 先頭３単語抽出
+                text = re.findall(r"[a-zA-Z]+", text)[0:3]
+                map_text = map(str, text)
+                target_text = " ".join(map_text)
+
+                # 生成準備
+                generated = tokenizer(target_text, return_tensors="pt").input_ids.cuda()
+
+                # テキスト生成設定
+                # パラメータ:  num_beams=gen_num, no_repeat_ngram_size=2, early_stopping=True,
+                sample_outputs = model.generate(generated, do_sample=True, top_k=50,
+                                                min_length=25, max_length=800, top_p=0.95,
+                                                num_return_sequences=gen_num)
 
             # text MIN MAXの値が上手く動作していない．min9 max25
             logger.info(min(df[df['jobflag'] == i].description.str.len()))

@@ -61,7 +61,7 @@ python gen_finetune.py -p parameters.json
 - Fine-Tuningしたモデルを指定して，テキスト生成
   - result-dir下に`train_generated.csv`が作成される
 ```shell
-python gen_finetune.py -p parameters.json -l ./result/[date]/gen_model
+nohup python gen_finetune.py -p parameters.json -l ./result/[date]/gen_model
 ```
 
 ## Training
@@ -103,8 +103,12 @@ nohup python.py inference.py --load_model result/{結果ディレクトリ名}
 │   └── 20211026_165841
 ├── gen_finetune        # 生成モデル
 ├── preprocess.py       # 前処理
+├── augment_data.py     # EDAデータ生成
 ├── model_BERT.py       # BERTモデル
-├── train_BERT.py       # BERT学習(実行ファイル)
+├── model_BERT_Conv.py  # BERT_Convモデル
+├── model_RoBERTa.py    # RoBERTaモデル
+├── train_BERT.py       # BERT学習
+├── train_RoBERTa.py    # RoBERTa学習
 ├── inference.py        # 推論
 └── utils.py            # 共有関数群
 ```

@@ -22,8 +22,10 @@ from transformers import pipeline
 from nltk import tokenize
 from nltk.tokenize import word_tokenize
 import gc
+import language_tool_python
 
 logger = logging.getLogger(__name__)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 class TrainDataset(Dataset):
@@ -46,19 +48,34 @@ class TrainDataset(Dataset):
 
 def clean_txt(df) -> Any:
     # 不要タグの削除-クリーニング
-    logger.info('Cleaning Test Dataset...')
+    logger.info('Cleaning Dataset...')
 
-    reg_obj = re.compile(r"<[^>]*?>")
-    df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
-    df = df.apply(lambda x: x.lstrip())
+    # reg_obj = re.compile(r"<[^>]*?>")
+    # df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
+    # df = df.apply(lambda x: x.lstrip())
 
-    # descriptions = descriptions.apply(lambda x: BeautifulSoup(x, 'html.parser').get_text().lstrip())
-    # reg_kanji = re.compile(u'[一-龥]')
-    # reg_han = re.compile('[\u0000-\u007F]+')
-    # df = df.apply(lambda x: reg_han.sub("", x))
-    # df = df.apply(lambda x: x.encode('cp932', errors='ignore').decode('cp932'))  # cp932文字コードに含まれない文字は削除
+    # df = df.apply(lambda x: BeautifulSoup(x, 'html.parser').prettify().lstrip())
 
-    return df
+    # 校正
+    # tool = language_tool_python.LanguageToolPublicAPI('en-US')
+
+    df_pre = df.copy()
+
+    for i in range(0, len(df)):
+        soup = BeautifulSoup(df[i], 'html.parser')
+        text = soup.get_text()
+        lines = [line.strip() for line in text.splitlines()]
+        for n in range(0, len(lines)):
+            if lines[n]:
+                if lines[n][-1] != '.':
+                    lines[n] = lines[n] + '.'
+        text = "".join(line for line in lines if line)
+
+        # matches = tool.check(text)
+        # text = language_tool_python.utils.correct(text, matches)
+        df_pre[i] = text
+
+    return df_pre
 
 
 def gen_model(params, result_dir) -> None:
@@ -203,9 +220,13 @@ def gen_model(params, result_dir) -> None:
         # 保存用データフレームにコピー
         df_save = df.copy()
 
+        # 校正toolセットアップ
+        tool = language_tool_python.LanguageToolPublicAPI('en-US')
+
         for i in range(1, label_num + 1):
             logger.info("============================================")
             logger.info("label: " + str(i))
+            logger.info("============================================")
 
             # text MIN MAXの値が上手く動作していない．min9 max25
             logger.info(min(df[df['jobflag'] == i].description.str.len()))
@@ -220,7 +241,7 @@ def gen_model(params, result_dir) -> None:
                 txt_len_mean = int(df[df['jobflag'] == i].description.str.len().mean())
                 df_txt_len = df[df['jobflag'] == i].description.str.len().median()  # 生成文字列数
 
-                logger.info("label: " + str(i) + "  description-num: " + str(n) + "/" + str(df_size))
+                logger.info("label: " + str(i) + "  description-num: " + str(n) + "/" + str(df_size-1))
                 logger.info("txt_len_MIN: " + str(txt_len_min) + " | txt_len_MAX: " + str(txt_len_max))
                 logger.info("txt_len_sent: " + str(txt_len_sent))
                 logger.info("============================================")
@@ -248,15 +269,21 @@ def gen_model(params, result_dir) -> None:
                 # min_length=txt_len_min, max_length=txt_len_max,
                 sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
                                                 no_repeat_ngram_size=2,
-                                                min_length=int(txt_len_min), max_length=int(1000),
+                                                min_length=int(100), max_length=int(1000),
                                                 num_return_sequences=gen_num)
                 # sample_outputs = model.generate(generated, num_beams=gen_num, max_length=txt_len_max,
                 #                                 num_return_sequences=gen_num)
 
                 # 生成データ
                 for s, sample_output in enumerate(sample_outputs):
+                    output_text = tokenizer.decode(sample_output, skip_special_tokens=True)
+
+                    # 校正
+                    matches = tool.check(output_text)
+                    output_text = language_tool_python.utils.correct(output_text, matches)
+
                     # 文頭３単語削除
-                    output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").replace(target_text, '').lstrip()
+                    output_text = output_text.strip().replace('\n', " ").replace(target_text, '').lstrip()
 
                     # 先頭１センテンス削除
                     # output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").split('.',1)[1].lstrip()
@@ -400,6 +427,10 @@ if __name__ == "__main__":
 
     # 生成モデル作成
     gen_model(params, result_dir)
+
+    # Test Html Cleaning
+    # df = pd.read_csv(params.train_file_path)  # 読み込み
+    # df['description'] = clean_txt(df['description'])
 
     # NLP Aug
     # nlp_aug(params, result_dir)

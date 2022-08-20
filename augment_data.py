@@ -28,7 +28,7 @@ def easy_data_augment(params, result_dir):
     nltk.download('omw-1.4')
     eda_ins = EDA(random_state=params.seed)
 
-    data_original = params.train_file_path
+    data_original = params.train_eda_file_path
     data_augmented = result_dir + '/' + data_original.split('/')[-1].removesuffix('.csv') + '_augmented.csv'
 
     df = pd.read_csv(data_original, index_col=0)

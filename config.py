@@ -36,7 +36,8 @@ class Parameters:
 
     # データセットパラメータ
     train_file_path: str = "./dataset/train.csv"
-    train_gen_file_path: str = "./dataset/train_generated.csv"
+    train_gen_file_path: str = "./dataset/train_generated_change3words_gpt2_x2_augmented.csv"
+    train_eda_file_path: str = "./dataset/train_generated_remain3words_gpt2_x2.csv"
     test_file_path: str = "./dataset/test.csv"
     submit_sample_file_path: str = "./dataset/submit_sample.csv"
     gen_model_name: str = 'distilgpt2'

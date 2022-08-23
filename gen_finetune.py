@@ -23,6 +23,7 @@ from nltk import tokenize
 from nltk.tokenize import word_tokenize
 import gc
 import language_tool_python
+import time
 
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -46,33 +47,78 @@ class TrainDataset(Dataset):
         return self.input_ids[idx], self.attn_masks[idx]
 
 
+def fukusuu_replace(lines):
+    wawawa_dict = {
+        '..': '.',
+        '. .': '.',
+        '!.': '.',
+        ' .': '.'
+    }
+
+    for key, value in wawawa_dict.items():
+        lines = lines.replace(key, value)
+
+    return lines
+
 def clean_txt(df) -> Any:
     # 不要タグの削除-クリーニング
     logger.info('Cleaning Dataset...')
 
-    # reg_obj = re.compile(r"<[^>]*?>")
     # df = df.apply(lambda x: reg_obj.sub("", x).replace('\\u202f', '').replace('\\', ''))
     # df = df.apply(lambda x: x.lstrip())
 
     # df = df.apply(lambda x: BeautifulSoup(x, 'html.parser').prettify().lstrip())
 
-    # 校正
-    # tool = language_tool_python.LanguageToolPublicAPI('en-US')
-
     df_pre = df.copy()
 
     for i in range(0, len(df)):
         soup = BeautifulSoup(df[i], 'html.parser')
-        text = soup.get_text()
-        lines = [line.strip() for line in text.splitlines()]
-        for n in range(0, len(lines)):
-            if lines[n]:
-                if lines[n][-1] != '.':
-                    lines[n] = lines[n] + '.'
-        text = "".join(line for line in lines if line)
 
-        # matches = tool.check(text)
-        # text = language_tool_python.utils.correct(text, matches)
+        li_list = []
+        for li in soup.find_all('li'):
+            li_list.append(li.text)
+
+        li_list = list(filter(None, li_list))
+        lines = []
+        for line in li_list:
+            # 置換処理
+            reg_obj = re.compile(r"<[^>]*?>")  # 追加htmlタグ削除　<span>タグなど
+            line = reg_obj.sub("", line)
+
+            # line = fukusuu_replace(line)
+            # line = line.replace('..', '.')
+            # line = line.replace('. .', '.').replace(' .', '.')
+
+            line = line.replace('\\\'s', '\'s')
+            line = line.replace(';', '')
+            line = line.replace('\\\'', '')
+            line = line.replace('\\u202f', '')
+            line = line.replace('\' ', '')
+            line = line.replace(':', '')
+            line = line.replace('\\xa0', '')
+            line = line.replace('*', '')
+            line = line.replace('â\\x80\\x99s', '')
+            line = line.replace('\\\\', '\\')
+            line = line.replace('(s)', 's')
+            line = line.replace('–', '')
+            line = line.replace('--', ' ')
+            line = line.replace('\\uf0b7', '')
+            line = line.replace('s\\', 's')
+            line = line.replace('\\', '/')
+
+            if line[-1] != '.' and line[-1] != '!':  # 文末ピリオド
+                line = line + '.'
+            if len(line) == 2:
+                line = line.replace(' .', '')
+                line = line.replace('.', '')
+
+            lines.append(line.strip())
+
+        text = "".join(line for line in lines if line)
+        text = text.replace('....', '.')
+        text = text.replace('...', '')
+        text = text.replace('..', '.')
+        text = text.replace('. .', '.')
         df_pre[i] = text
 
     return df_pre
@@ -126,7 +172,7 @@ def gen_model(params, result_dir) -> None:
 
             # クリーニング
             descriptions = clean_txt(descriptions)
-            descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False)
+            descriptions.to_csv(result_dir + f'/dataset_clean.csv', index=False, encoding='utf8')
 
             max_length = max([len(tokenizer.encode(description)) for description in descriptions])
 
@@ -192,7 +238,7 @@ def gen_model(params, result_dir) -> None:
             generator = pipeline("text-generation", model="xlnet-base-cased")
             print(generator("Develop cutting-edge web applications "))
 
-    else:
+    else:  # 生成プロセス
         logger.info("load_model" + params.args['load_model'])
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
@@ -249,7 +295,7 @@ def gen_model(params, result_dir) -> None:
                 # 先頭３単語抽出 def 3
                 text = re.findall(r"[a-zA-Z]+", text)[0:7]
                 map_text = map(str, text)
-                target_text = " ".join(map_text)
+                target_text = " ".join(map_text).replace(' e g', ' e.g')
 
                 # 一文抽出
                 # nltk.download('punkt')
@@ -270,7 +316,7 @@ def gen_model(params, result_dir) -> None:
                 sample_outputs = model.generate(generated, do_sample=True, top_k=50, top_p=0.95,
                                                 no_repeat_ngram_size=2,
                                                 min_length=int(100), max_length=int(1000),
-                                                num_return_sequences=gen_num)
+                                                num_return_sequences=1)
                 # sample_outputs = model.generate(generated, num_beams=gen_num, max_length=txt_len_max,
                 #                                 num_return_sequences=gen_num)
 
@@ -283,7 +329,7 @@ def gen_model(params, result_dir) -> None:
                     output_text = language_tool_python.utils.correct(output_text, matches)
 
                     # 文頭３単語削除
-                    output_text = output_text.strip().replace('\n', " ").replace(target_text, '').lstrip()
+                    # output_text = output_text.strip().replace('\n', " ").replace(target_text, '').lstrip()
 
                     # 先頭１センテンス削除
                     # output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").split('.',1)[1].lstrip()
@@ -292,12 +338,13 @@ def gen_model(params, result_dir) -> None:
                     # output_text = tokenizer.decode(sample_output, skip_special_tokens=True).strip().replace('\n', " ").lstrip()
 
                     # Data Aug処理 bert-base-uncased distilbert-base-uncased roberta-base
-                    aug = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="insert", device='cuda')
-                    augmented_text = str(aug.augment(target_text)[0]).capitalize()
-
-                    output_text = augmented_text + " " + output_text
+                    # aug = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="insert", device='cuda')
+                    # augmented_text = str(aug.augment(target_text)[0]).capitalize()
+                    #
+                    # output_text = augmented_text + " " + output_text
 
                     output_text = output_text.replace(' ,', ',').replace(' .', '.').replace('  ', ' ').replace(' e g ', 'e.g')
+                    # time.sleep(0.2)
 
                     # print("Original:")
                     # print(target_text)
@@ -336,7 +383,7 @@ def gen_model(params, result_dir) -> None:
 
                 logger.info("============================================")
 
-        df_save.to_csv(result_dir + f'/train_generated.csv', index=False)
+        df_save.to_csv(result_dir + f'/train_generated.csv', index=False, encoding='utf8')
         logger.info("Saved train_generated.csv")
 
 
@@ -428,9 +475,10 @@ if __name__ == "__main__":
     # 生成モデル作成
     gen_model(params, result_dir)
 
-    # Test Html Cleaning
+    # # Test Html Cleaning
     # df = pd.read_csv(params.train_file_path)  # 読み込み
-    # df['description'] = clean_txt(df['description'])
+    # descriprion = clean_txt(df['description'])
+    # descriprion.to_csv(result_dir + f'/dataset_clean.csv', index=False, encoding='utf8')
 
     # NLP Aug
     # nlp_aug(params, result_dir)
